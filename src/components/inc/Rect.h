@@ -7,9 +7,10 @@
 struct Vector2;
 
 class Rect : public HitBox {
-public:
-    bool is_collide(HitBox& hitbox) override;
 private:
     SDL_Rect _rect;
-    Vector2* _local_pos; // Assuming Vector2 is a struct/class with x, y
+    Vector2* _local_pos;
+
+public:
+    bool is_collide(HitBox& hitbox) override;
 };

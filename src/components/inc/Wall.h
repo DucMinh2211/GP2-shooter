@@ -4,5 +4,5 @@
 
 class Wall : public Obstacle {
 public:
-    void collide(Rect& object) override;
+    void collide(std::vector<HitBox> object) override;
 };
