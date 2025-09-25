@@ -1,0 +1,20 @@
+[
+ {
+  "directory": "/home/aslay/projects/GP2-shooter",
+  "arguments": [
+   "g++",
+   "-std=c++17",
+   "-Wall",
+   "-Isrc",
+   "-MMD",
+   "-MP",
+   "-I/usr/include/SDL2",
+   "-D_REENTRANT",
+   "-c",
+   "src/main.cpp",
+   "-o",
+   "src/main.o"
+  ],
+  "file": "src/main.cpp"
+ }
+]

@@ -33,13 +33,18 @@ int main (int argc, char *argv[]) {
 
     // main loop
     bool running = true;
+    SDL_Event event;
     while (running) {
-        SDL_Event event;
         while(SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
                 running = false;
             }
         }
+
+     // --- Add rendering commands here ---
+    SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF); // Set draw color to white
+    SDL_RenderClear(renderer);                            // Clear the screen
+    SDL_RenderPresent(renderer);                          // Update the screen
     }
 
     // Quit SDL
