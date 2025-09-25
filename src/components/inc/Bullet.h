@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Entity.h"
-#include "HitBox.h"
 
 // Placeholder for Enum
 enum class BulletBuffType {};

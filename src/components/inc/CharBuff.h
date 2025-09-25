@@ -12,6 +12,7 @@ class CharBuff : public Buff {
 private:
     CharBuffType _type;
     Character* _char;
+
 public:
     void activate() override;
     void deactivate() override;

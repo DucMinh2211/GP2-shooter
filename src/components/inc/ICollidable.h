@@ -1,7 +1,9 @@
 #pragma once
 
-#include "HitBox.h"
 #include <vector>
+
+// Forward Declaration
+class HitBox;
 
 class ICollidable {
 public:

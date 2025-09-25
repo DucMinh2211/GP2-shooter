@@ -2,9 +2,10 @@
 
 #include "ICollidable.h"
 #include "IUpdatable.h"
-#include "math/Vector2.h"
-#include <SDL2/SDL_render.h>
-#include <vector>
+
+// Forward Declaration
+class Vector2;
+class SDL_Texture;
 
 class Entity : public ICollidable, public IUpdatable {
 protected:

@@ -1,8 +1,9 @@
 #pragma once
 
 #include "HitBox.h"
-#include "math/Vector2.h"
 
+// Forward Declaration
+class Vector2;
 
 class Circle : public HitBox {
 private:

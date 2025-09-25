@@ -3,7 +3,6 @@
 #include "Entity.h"
 #include "BulletBuff.h"
 #include "CharBuff.h"
-#include <vector>
 
 // Placeholders for Enums
 enum class GunType {};
@@ -15,7 +14,7 @@ public:
     HitBox* get_collision();
     void shoot();
     void move(float dx, float dy);
-    void update(float delta_time);
+    void update(float delta_time) override;
     void collide(std::vector<HitBox> object) override;
     void add_buff(CharBuff& buff, CharBuffType buff_type);
     void remove_buff(CharBuff& buff, CharBuffType buff_type);

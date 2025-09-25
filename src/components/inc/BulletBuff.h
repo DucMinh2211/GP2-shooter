@@ -1,7 +1,9 @@
 #pragma once
 
 #include "Buff.h"
-#include "Character.h"
+
+// Forward Declaration
+class Character;
 
 // Placeholder for Enum
 enum class BulletBuffType {};
