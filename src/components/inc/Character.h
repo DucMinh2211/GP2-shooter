@@ -4,27 +4,29 @@
 #include "BulletBuff.h"
 #include "CharBuff.h"
 
-// Placeholders for Enums
-enum class GunType {};
+enum class GunType {
+    NONE = 0,
+    PISTOL = 1,
+    AK = 2,
+    SHOTGUN = 3,
+    NUM = 4, // size of guntype
+};
 
 class Character : public Entity {
+private:
+    float _health;
+    bool _activated;
+    GunType _gun_type = GunType::NONE;
+    SDL_Texture* _gun_sprite;
+    BulletBuff _gun_buffed = BulletBuff(INFINITY, BulletBuffType::NONE);
+    std::vector<CharBuff> _buff_list;
+
 public:
-    Vector2 get_position();
-    SDL_Texture* get_sprite();
+    Character(Vector2 position, SDL_Texture* sprite, float speed, float health, bool activate);
     HitBox* get_collision();
     void shoot();
     void move(float dx, float dy);
     void update(float delta_time) override;
-    void collide(std::vector<HitBox> object) override;
-    void add_buff(CharBuff& buff, CharBuffType buff_type);
+    void collide(ICollidable& object) override;
     void remove_buff(CharBuff& buff, CharBuffType buff_type);
-    void change_bullet_buff(BulletBuff& bullet_buff, BulletBuffType buff_type);
-
-private:
-    float _health;
-    SDL_Texture* _gun_sprite;
-    bool _activated;
-    GunType _gun_type;
-    std::vector<CharBuff*> _buff_list;
-    BulletBuffType _gun_buffed;
 };

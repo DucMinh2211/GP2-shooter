@@ -1,8 +1,9 @@
 #pragma once
 
 #include "Obstacle.h"
+#include "components/inc/ICollidable.h"
 
 class BlackHole : public Obstacle {
 public:
-    void collide(std::vector<HitBox> object) override;
+    void collide(ICollidable& object) override;
 };
