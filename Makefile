@@ -13,7 +13,7 @@ CXX = g++
 # Compiler flags
 # -Isrc: Add src to include path
 # -MMD -MP: Generate dependency files
-CXXFLAGS = -std=c++17 -Wall -Isrc -MMD -MP
+CXXFLAGS = -std=c++17 -Wall -Isrc -MMD -MP 
 
 # Source files
 SRCS = $(filter-out src/main.cpp, $(shell find src -name '*.cpp'))

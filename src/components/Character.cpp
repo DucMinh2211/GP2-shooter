@@ -7,6 +7,8 @@
 #include "math/Vector2.h"
 #include "SDL2/SDL_render.h"
 #include <vector>
+#include <typeinfo>
+#include "Constant.h"
 
 Character::Character(Vector2 position, SDL_Texture* sprite, float speed, float health, bool activate) : Entity(position, sprite, speed), _health(health) {
     // init buff_list
@@ -33,7 +35,10 @@ void Character::update(float delta_time) {
 }
 
 void Character::set_direction(Vector2 direction) {
-    this->_direction = direction;
+    _direction = direction;
+    if (_direction.length_squared() > 0) {
+        _last_direction = _direction; // chỉ update khi có hướng di chuyển
+    }
 }
 
 void Character::collide(ICollidable& object) {
@@ -54,7 +59,8 @@ void Character::remove_buff(CharBuffType buff_type) {
 void Character::shoot(std::vector<Bullet*>& bullet_list, ResourceManager& resource_manager) {
     SDL_Texture* bullet_sprite = resource_manager.get_texture("bullet");
     // Create a bullet at the character's position, facing _direction
-    Bullet* bullet = new Bullet(_position, bullet_sprite, _speed, 10.0f, _direction, _gun_buffed.getType());
+    Vector2 bullet_dir = (_direction.length_squared() > 0) ? _direction : _last_direction;
+    Bullet* bullet = new Bullet(_position, bullet_sprite, BULLET_SPEED, 10.0f, bullet_dir, _gun_buffed.getType());
     // Add a rectangular hitbox (8x8) at the bullet's position
     bullet->add_hitbox(new Rect(_position, SDL_Rect{(int)_position.x, (int)_position.y, 8, 8}));
     bullet_list.push_back(bullet);

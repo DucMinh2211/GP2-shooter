@@ -33,7 +33,7 @@ void Bullet::update_hitboxes() {
 void Bullet::render(SDL_Renderer* renderer) {
     SDL_Rect srcRect = {0, 0, 24, 24}; // bullet sprite in sheet
     SDL_Rect bullet_rect = { (int)this->_position.x, (int)this->_position.y, 24, 24 };
-    float angle = std::atan2(this->_init_direction.x, this->_init_direction.y) * 180.0f / PI;
+    float angle = std::atan2(this->_init_direction.y, this->_init_direction.x) * 180.0f / PI;
     SDL_RenderCopyEx(renderer, this->_sprite, &srcRect, &bullet_rect, angle, NULL, SDL_FLIP_NONE);
 }
 

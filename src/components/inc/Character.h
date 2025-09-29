@@ -30,6 +30,7 @@ private:
     GunType _gun_type = GunType::NONE;
     SDL_Texture* _gun_sprite;
     Vector2 _direction = ZERO;
+    Vector2 _last_direction = ZERO;
     BulletBuff _gun_buffed = BulletBuff(INFINITY, BulletBuffType::NONE);
     std::vector<CharBuff> _buff_list;
 
