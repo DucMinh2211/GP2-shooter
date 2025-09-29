@@ -15,7 +15,7 @@ public:
     void collide(ICollidable& object) override;
     void add_hitbox(HitBox* hitbox);
     void update_hitboxes();
-    const std::vector<HitBox*>& get_hitboxes() const { return _hitbox_list; }
+    std::vector<HitBox*>& get_hitboxes() override { return _hitbox_list; }
     void render(SDL_Renderer* renderer) override;
 
     // Buff helpers

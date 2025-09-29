@@ -29,8 +29,8 @@ private:
     bool _activated;
     GunType _gun_type = GunType::NONE;
     SDL_Texture* _gun_sprite;
-    Vector2 _direction = ZERO;
-    Vector2 _last_direction = ZERO;
+    Vector2 _direction = {1.0f, 0.0f};
+    Vector2 _last_direction = {1.0f, 0.0f}; // last non-zero direction
     BulletBuff _gun_buffed = BulletBuff(INFINITY, BulletBuffType::NONE);
     std::vector<CharBuff> _buff_list;
 
@@ -38,6 +38,7 @@ private:
 public:
     Character(Vector2 position, SDL_Texture* sprite, float speed, float health, bool activate);
     HitBox* get_collision();
+    std::vector<HitBox*>& get_hitboxes() override { return _hitbox_list; }
     void shoot(std::vector<Bullet*>& bullet_list, ResourceManager& resource_manager) override;
     void set_direction(Vector2 direction) override;
     void update(float delta_time) override;

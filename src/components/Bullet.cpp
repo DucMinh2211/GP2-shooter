@@ -3,38 +3,41 @@
 #include "inc/Rect.h"
 #include "inc/Circle.h"
 #include "SDL2/SDL_render.h"
+#include "inc/OBB.h"
+#include <iostream>
 
 Bullet::Bullet(Vector2 position, SDL_Texture* sprite, float speed, float damage, Vector2 init_direction, BulletBuffType buffed)
-    : Entity(position, sprite, speed), _damage(damage), _init_direction(init_direction), _buffed(buffed) {}
+    : Entity(position, sprite, BULLET_SPEED), _damage(damage), _init_direction(init_direction), _buffed(buffed) {}
 
 void Bullet::add_hitbox(HitBox* hitbox) {
     _hitbox_list.push_back(hitbox);
 }
 
 void Bullet::update_hitboxes() {
-    // Update all hitboxes to match bullet's position
+    float angle = std::atan2(_init_direction.y, _init_direction.x);
+
     for (auto* hitbox : _hitbox_list) {
-        // For Rect
-        if (auto* rect = dynamic_cast<Rect*>(hitbox)) {
-            SDL_Rect r = rect->get_rect();
-            r.x = static_cast<int>(_position.x);
-            r.y = static_cast<int>(_position.y);
-            // You may want to add a set_rect method to Rect to update its SDL_Rect
-            // rect->set_rect(r);
-        }
-        // For Circle
-        else if (auto* circle = dynamic_cast<Circle*>(hitbox)) {
-            // You may want to add a set_local_pos method to HitBox/Circle
-            // circle->set_local_pos(_position);
+        if (auto* obb = dynamic_cast<OBB*>(hitbox)) {
+            // center căn giữa sprite 24x24
+            Vector2 center = _position + Vector2(24.0f / 2.0f, 24.0f / 2.0f);
+            obb->set_transform(center, angle);
         }
     }
 }
 
+
 void Bullet::render(SDL_Renderer* renderer) {
-    SDL_Rect srcRect = {0, 0, 24, 24}; // bullet sprite in sheet
+    SDL_Rect srcRect = {4, 0, 20, 24}; // bullet sprite in sheet
     SDL_Rect bullet_rect = { (int)this->_position.x, (int)this->_position.y, 24, 24 };
     float angle = std::atan2(this->_init_direction.y, this->_init_direction.x) * 180.0f / PI;
     SDL_RenderCopyEx(renderer, this->_sprite, &srcRect, &bullet_rect, angle, NULL, SDL_FLIP_NONE);
+
+
+    //Debug hibox | comment sau khi debug xong
+    SDL_Color debugColor = {255, 0, 0, 255};
+    for (auto* hitbox : _hitbox_list) {
+        hitbox->debug_draw(renderer, debugColor);
+    }
 }
 
 void Bullet::update(float delta_time) {
@@ -44,5 +47,21 @@ void Bullet::update(float delta_time) {
 }
 
 void Bullet::collide(ICollidable& object) {
-    // Implement collision response here
+    // Lặp qua tất cả hitbox của bullet
+    for (auto* hb1 : this->_hitbox_list) {
+        if (auto* obb1 = dynamic_cast<OBB*>(hb1)) {
+            
+            // Lặp qua tất cả hitbox của object
+            for (auto* hb2 : object.get_hitboxes()) {
+                if (auto* obb2 = dynamic_cast<OBB*>(hb2)) {
+                    // Kiểm tra collision OBB vs OBB
+                    if (obb1->is_collide(*obb2)) {
+                        // Va chạm xảy ra, xử lý logic
+                        std::cout << "Bullet hit an object!" << std::endl;
+                    }
+                }
+            }
+        }
+    }
 }
+

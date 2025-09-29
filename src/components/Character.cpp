@@ -9,6 +9,7 @@
 #include <vector>
 #include <typeinfo>
 #include "Constant.h"
+#include "inc/OBB.h"
 
 Character::Character(Vector2 position, SDL_Texture* sprite, float speed, float health, bool activate) : Entity(position, sprite, speed), _health(health) {
     // init buff_list
@@ -60,9 +61,26 @@ void Character::shoot(std::vector<Bullet*>& bullet_list, ResourceManager& resour
     SDL_Texture* bullet_sprite = resource_manager.get_texture("bullet");
     // Create a bullet at the character's position, facing _direction
     Vector2 bullet_dir = (_direction.length_squared() > 0) ? _direction : _last_direction;
-    Bullet* bullet = new Bullet(_position, bullet_sprite, BULLET_SPEED, 10.0f, bullet_dir, _gun_buffed.getType());
-    // Add a rectangular hitbox (8x8) at the bullet's position
-    bullet->add_hitbox(new Rect(_position, SDL_Rect{(int)_position.x, (int)_position.y, 8, 8}));
+    Vector2 bullet_pos = {_position.x,_position.y - 10};
+    Bullet* bullet = new Bullet(bullet_pos, bullet_sprite, BULLET_SPEED, 10.0f, bullet_dir, _gun_buffed.getType());
+    int hb_width = 15;
+    int hb_height = 8;
+
+    // Tính tâm (center) của hitbox (nằm giữa sprite 24x24)
+    float hb_x = _position.x + 24.0f / 2.0f;
+    float hb_y = _position.y + 24.0f / 2.0f;
+
+    // halfSize = (width/2, height/2)
+    Vector2 halfSize(hb_width / 2.0f, hb_height / 2.0f);
+
+    // Góc ban đầu theo hướng bay của đạn
+    float angle = std::atan2(bullet_dir.y, bullet_dir.x);
+
+    // Tạo OBB hitbox
+    OBB* bulletHitbox = new OBB(Vector2(hb_x, hb_y), halfSize, angle);
+    bullet->add_hitbox(bulletHitbox);
+
+    // Push bullet vào danh sách
     bullet_list.push_back(bullet);
 }
 
