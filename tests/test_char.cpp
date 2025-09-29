@@ -15,6 +15,7 @@
 #include "components/inc/Bullet.h"
 #include "math/Vector2.h"
 
+
 int main (int argc, char *argv[]) {
     // SDL_Init
     if (SDL_Init(SDL_INIT_VIDEO)) {
@@ -119,6 +120,12 @@ int main (int argc, char *argv[]) {
 
         for (Bullet* bullet : bullet_list) {
             bullet->update(delta_time);
+        }
+        for (size_t i = 0; i < bullet_list.size(); i++) {
+            for (size_t j = i + 1; j < bullet_list.size(); j++) {
+                bullet_list[i]->collide(*bullet_list[j]);
+                bullet_list[j]->collide(*bullet_list[i]);
+            }
         }
 
 
