@@ -1,6 +1,6 @@
 [
  {
-  "directory": "/home/aslay/projects/GP2-shooter",
+  "directory": "/Users/nongthithuykieu/projects/GP2-shooter",
   "arguments": [
    "g++",
    "-std=c++17",
@@ -8,13 +8,139 @@
    "-Isrc",
    "-MMD",
    "-MP",
-   "-I/usr/include/SDL2",
-   "-D_REENTRANT",
+   "-I/opt/homebrew/include",
+   "-D_THREAD_SAFE",
    "-c",
-   "src/main.cpp",
+   "src/components/InputHandler.cpp",
    "-o",
-   "src/main.o"
+   "src/components/InputHandler.o"
   ],
-  "file": "src/main.cpp"
+  "file": "src/components/InputHandler.cpp"
+ },
+ {
+  "directory": "/Users/nongthithuykieu/projects/GP2-shooter",
+  "arguments": [
+   "g++",
+   "-std=c++17",
+   "-Wall",
+   "-Isrc",
+   "-MMD",
+   "-MP",
+   "-I/opt/homebrew/include",
+   "-D_THREAD_SAFE",
+   "-c",
+   "src/components/Character.cpp",
+   "-o",
+   "src/components/Character.o"
+  ],
+  "file": "src/components/Character.cpp"
+ },
+ {
+  "directory": "/Users/nongthithuykieu/projects/GP2-shooter",
+  "arguments": [
+   "g++",
+   "-std=c++17",
+   "-Wall",
+   "-Isrc",
+   "-MMD",
+   "-MP",
+   "-I/opt/homebrew/include",
+   "-D_THREAD_SAFE",
+   "-c",
+   "src/components/BulletBuff.cpp",
+   "-o",
+   "src/components/BulletBuff.o"
+  ],
+  "file": "src/components/BulletBuff.cpp"
+ },
+ {
+  "directory": "/Users/nongthithuykieu/projects/GP2-shooter",
+  "arguments": [
+   "g++",
+   "-std=c++17",
+   "-Wall",
+   "-Isrc",
+   "-MMD",
+   "-MP",
+   "-I/opt/homebrew/include",
+   "-D_THREAD_SAFE",
+   "-c",
+   "src/components/CharBuff.cpp",
+   "-o",
+   "src/components/CharBuff.o"
+  ],
+  "file": "src/components/CharBuff.cpp"
+ },
+ {
+  "directory": "/Users/nongthithuykieu/projects/GP2-shooter",
+  "arguments": [
+   "g++",
+   "-std=c++17",
+   "-Wall",
+   "-Isrc",
+   "-MMD",
+   "-MP",
+   "-I/opt/homebrew/include",
+   "-D_THREAD_SAFE",
+   "-c",
+   "src/components/HitBox.cpp",
+   "-o",
+   "src/components/HitBox.o"
+  ],
+  "file": "src/components/HitBox.cpp"
+ },
+ {
+  "directory": "/Users/nongthithuykieu/projects/GP2-shooter",
+  "arguments": [
+   "g++",
+   "-std=c++17",
+   "-Wall",
+   "-Isrc",
+   "-MMD",
+   "-MP",
+   "-I/opt/homebrew/include",
+   "-D_THREAD_SAFE",
+   "-c",
+   "src/components/Rect.cpp",
+   "-o",
+   "src/components/Rect.o"
+  ],
+  "file": "src/components/Rect.cpp"
+ },
+ {
+  "directory": "/Users/nongthithuykieu/projects/GP2-shooter",
+  "arguments": [
+   "g++",
+   "-std=c++17",
+   "-Wall",
+   "-Isrc",
+   "-MMD",
+   "-MP",
+   "-I/opt/homebrew/include",
+   "-D_THREAD_SAFE",
+   "-c",
+   "src/components/Bullet.cpp",
+   "-o",
+   "src/components/Bullet.o"
+  ],
+  "file": "src/components/Bullet.cpp"
+ },
+ {
+  "directory": "/Users/nongthithuykieu/projects/GP2-shooter",
+  "arguments": [
+   "g++",
+   "-std=c++17",
+   "-Wall",
+   "-Isrc",
+   "-MMD",
+   "-MP",
+   "-I/opt/homebrew/include",
+   "-D_THREAD_SAFE",
+   "-c",
+   "tests/test_char.cpp",
+   "-o",
+   "tests/test_char.o"
+  ],
+  "file": "tests/test_char.cpp"
  }
 ]

@@ -18,5 +18,5 @@ public:
     virtual ~Obstacle() = default;
     Vector2 get_position();
     Texture* get_sprite();
-    void collide(std::vector<HitBox> hitbox_list) override = 0;
+    virtual void collide(ICollidable& object) override = 0;
 };

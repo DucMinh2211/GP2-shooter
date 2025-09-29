@@ -3,28 +3,44 @@
 #include "Entity.h"
 #include "BulletBuff.h"
 #include "CharBuff.h"
+#include "IInputObject.h"
+#include "IRenderable.h"
+#include <vector>
 
-// Placeholders for Enums
-enum class GunType {};
+// forward decl
+class ResourceManager;
 
-class Character : public Entity {
+enum class GunType {
+    NONE = 0,
+    PISTOL = 1,
+    AK = 2,
+    SHOTGUN = 3,
+    NUM = 4, // size of guntype
+};
+
+class IBuffable {
 public:
-    Vector2 get_position();
-    SDL_Texture* get_sprite();
-    HitBox* get_collision();
-    void shoot();
-    void move(float dx, float dy);
-    void update(float delta_time) override;
-    void collide(std::vector<HitBox> object) override;
-    void add_buff(CharBuff& buff, CharBuffType buff_type);
-    void remove_buff(CharBuff& buff, CharBuffType buff_type);
-    void change_bullet_buff(BulletBuff& bullet_buff, BulletBuffType buff_type);
+    virtual void remove_buff(CharBuffType buff_type) = 0;
+};
 
+class Character : public Entity, public IInputObject, public IRenderable, public IBuffable {
 private:
     float _health;
-    SDL_Texture* _gun_sprite;
     bool _activated;
-    GunType _gun_type;
-    std::vector<CharBuff*> _buff_list;
-    BulletBuffType _gun_buffed;
+    GunType _gun_type = GunType::NONE;
+    SDL_Texture* _gun_sprite;
+    Vector2 _direction = ZERO;
+    BulletBuff _gun_buffed = BulletBuff(INFINITY, BulletBuffType::NONE);
+    std::vector<CharBuff> _buff_list;
+
+
+public:
+    Character(Vector2 position, SDL_Texture* sprite, float speed, float health, bool activate);
+    HitBox* get_collision();
+    void shoot(std::vector<Bullet*>& bullet_list, ResourceManager& resource_manager) override;
+    void set_direction(Vector2 direction) override;
+    void update(float delta_time) override;
+    void collide(ICollidable& object) override;
+    void remove_buff(CharBuffType buff_type) override;
+    void render(SDL_Renderer* renderer) override;
 };

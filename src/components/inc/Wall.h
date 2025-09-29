@@ -1,8 +1,9 @@
 #pragma once
 
 #include "Obstacle.h"
+#include "ICollidable.h"
 
 class Wall : public Obstacle {
 public:
-    void collide(std::vector<HitBox> object) override;
+    void collide(ICollidable& object) override;
 };
