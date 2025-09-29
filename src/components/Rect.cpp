@@ -27,10 +27,10 @@ void Rect::debug_draw(SDL_Renderer* renderer, SDL_Color color) {
 
     // 4 góc ban đầu (chưa xoay)
     Vector2 corners[4] = {
-        { _rect.x,         _rect.y },
-        { _rect.x+_rect.w, _rect.y },
-        { _rect.x+_rect.w, _rect.y+_rect.h },
-        { _rect.x,         _rect.y+_rect.h }
+        { (float)_rect.x,         (float)_rect.y },
+        { (float)_rect.x+_rect.w, (float)_rect.y },
+        { (float)_rect.x+_rect.w, (float)_rect.y+_rect.h },
+        { (float)_rect.x,         (float)_rect.y+_rect.h }
     };
 
     // Sau khi xoay quanh tâm
