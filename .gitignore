@@ -46,4 +46,5 @@ test-char
 
 # cache files
 .cache/
+.vscode/
 compile_commands.json
