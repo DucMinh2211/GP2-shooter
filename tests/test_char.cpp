@@ -14,6 +14,10 @@
 #include "components/inc/InputHandler.h"
 #include "components/inc/Bullet.h"
 #include "math/Vector2.h"
+#include "components/inc/BlackHole.h"
+#include "components/inc/Circle.h"
+#include "components/inc/OBB.h"
+
 
 
 int main (int argc, char *argv[]) {
@@ -81,7 +85,19 @@ int main (int argc, char *argv[]) {
     // setup
     Character player(Vector2(WINDOW_W / 2.0f - 50.0f, WINDOW_H / 2.0f), red_texture, 100.0f, 100.0f, true);
     Character player2(Vector2(WINDOW_W / 2.0f + 50.0f, WINDOW_H / 2.0f), black_texture, 100.0f, 100.0f, true);
+
     std::vector<IInputObject*> char_list;
+    BlackHole blackhole(Vector2(WINDOW_W / 2.0f, WINDOW_H / 2.0f), 
+                    120.0f, 60.0f, // outer radius, inner radius
+                    5.0f, 15.0f);  // outer dps, inner dps
+
+// tạo hitbox cho blackhole (chỉ để test)
+    Circle* outer = new Circle(Vector2(WINDOW_W / 2.0f, WINDOW_H / 2.0f), 120.0f);
+    Circle* inner = new Circle(Vector2(WINDOW_W / 2.0f, WINDOW_H / 2.0f), 60.0f);
+
+    // thêm vào hitbox list
+    blackhole.get_hitboxes().push_back(outer);
+    blackhole.get_hitboxes().push_back(inner);
 
     InputHandler input_handler(InputSet::INPUT_1, player, char_list);
     InputHandler input_handler2(InputSet::INPUT_2, player2, char_list);
@@ -127,6 +143,9 @@ int main (int argc, char *argv[]) {
                 bullet_list[j]->collide(*bullet_list[i]);
             }
         }
+        for (size_t i = 0; i < bullet_list.size(); i++) {
+            blackhole.collide(*bullet_list[i]);
+        }
 
 
         // --- Rendering ---
@@ -154,6 +173,11 @@ int main (int argc, char *argv[]) {
             IRenderable* obj = dynamic_cast<IRenderable*>(bullet);
             obj->render(renderer);
         }
+        // render hitbox blackhole
+        for (HitBox* hb : blackhole.get_hitboxes()) {
+            hb->debug_draw(renderer, {0, 0, 255, 255}); // xanh dương để thấy rõ
+        }
+
 
         SDL_RenderPresent(renderer);                          // Update the screen
     }

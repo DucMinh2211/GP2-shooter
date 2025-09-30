@@ -29,17 +29,5 @@ bool Rect::is_collide(Circle& circle) {
     return (dx * dx + dy * dy) <= (radius * radius);
 }
 
-// Circle-Rect collision (calls Rect-Circle)
-bool Circle::is_collide(Rect& rect) {
-    return rect.is_collide(*this);
-}
 
-// Circle-Circle collision
-bool Circle::is_collide(Circle& other) {
-    Vector2 a = this->get_local_pos();
-    Vector2 b = other.get_local_pos();
-    float r = this->get_radius() + other.get_radius();
-    float dx = a.x - b.x;
-    float dy = a.y - b.y;
-    return (dx * dx + dy * dy) <= (r * r);
-}
+
