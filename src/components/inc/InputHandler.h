@@ -17,8 +17,8 @@ enum InputSet {
 class InputHandler : public IUpdatable {
 private:
     InputSet _input_set;
-    IInputObject& _activated_char;
-    std::vector<IInputObject*> _char_list;
+    IInputObject* _activated_char;
+    IInputObject* _unactivated_char;
 
     bool _up = false;
     bool _down = false;
@@ -28,5 +28,5 @@ private:
 public:
     void handle_event(SDL_Event& event, std::vector<Bullet*>& bullet_list, ResourceManager& resource_manager);
     void update(float delta_time) override;
-    InputHandler(InputSet input_set, IInputObject& char_, std::vector<IInputObject*> char_list);
+    InputHandler(InputSet input_set, IInputObject* char_, IInputObject* _unactivated_char);
 };

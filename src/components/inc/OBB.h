@@ -3,6 +3,7 @@
 #include "math/Vector2.h"
 #include <SDL2/SDL.h>
 #include <vector>
+#include "Circle.h"
 
 class OBB : public HitBox {
 private:
@@ -17,6 +18,7 @@ public:
 
     // Lấy ra 4 đỉnh sau khi xoay
     std::vector<Vector2> get_corners() const;
+    Vector2 get_center() const { return _center; }
 
     // Vẽ debug
     void debug_draw(SDL_Renderer* renderer, SDL_Color color) override;
@@ -25,4 +27,6 @@ public:
 
     // SAT collision check OBB-OBB
     bool is_collide(OBB& other);
+
+    bool is_collide(Circle& circle);
 };

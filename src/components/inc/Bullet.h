@@ -9,14 +9,16 @@
 
 class Bullet : public Entity, public IRenderable {
 public:
-    Bullet(Vector2 position, SDL_Texture* sprite, float speed, float damage, Vector2 init_direction, BulletBuffType buffed);
+    Bullet(Vector2 position, SDL_Texture* sprite, float speed, float damage, Vector2 init_direction, BulletBuffType buffed, int team_id);
     float get_damage() { return this->_damage; }
+    int get_team_id() { return this->_team_id; }
     void update(float delta_time) override;
     void collide(ICollidable& object) override;
     void add_hitbox(HitBox* hitbox);
     void update_hitboxes();
     std::vector<HitBox*>& get_hitboxes() override { return _hitbox_list; }
     void render(SDL_Renderer* renderer) override;
+    void add_force(Vector2 force);
 
     // Buff helpers
     bool isBouncing() const { return _buffed == BulletBuffType::BOUNCING; }
@@ -27,6 +29,7 @@ public:
     Vector2 get_init_direction() const { return _init_direction; }
 
 private:
+    int _team_id;
     float _damage;
     Vector2 _init_direction;
     BulletBuffType _buffed;

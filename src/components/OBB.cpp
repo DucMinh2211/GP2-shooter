@@ -1,4 +1,5 @@
 #include "inc/OBB.h"
+#include "inc/Circle.h"
 #include <cmath>
 
 // Constructor
@@ -99,4 +100,27 @@ bool OBB::is_collide(HitBox& other) {
     if (auto* obb = dynamic_cast<OBB*>(&other))
         return is_collide(*obb);
     return false; // future: có thể thêm Circle vs OBB
+}
+
+bool OBB::is_collide(Circle& circle) {
+    // Vector từ OBB center tới Circle center
+    Vector2 d = circle.get_center() - _center;
+
+    // Tính cos & sin của -_angle để đưa về local space
+    float c = std::cos(-_angle);
+    float s = std::sin(-_angle);
+
+    // Circle center trong local space của OBB
+    float localX = d.x * c - d.y * s;
+    float localY = d.x * s + d.y * c;
+
+    // Clamp vào box [-halfSize, halfSize]
+    float closestX = std::max(-_halfSize.x, std::min(localX, _halfSize.x));
+    float closestY = std::max(-_halfSize.y, std::min(localY, _halfSize.y));
+
+    // Vector từ circle center (local) đến điểm gần nhất
+    float dx = localX - closestX;
+    float dy = localY - closestY;
+
+    return (dx * dx + dy * dy) <= (circle.get_radius() * circle.get_radius());
 }

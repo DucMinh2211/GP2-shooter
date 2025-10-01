@@ -14,11 +14,6 @@
 #include "components/inc/InputHandler.h"
 #include "components/inc/Bullet.h"
 #include "math/Vector2.h"
-#include "components/inc/BlackHole.h"
-#include "components/inc/Circle.h"
-#include "components/inc/OBB.h"
-#include "components/inc/AnimatedSprite.h"
-
 
 
 int main (int argc, char *argv[]) {
@@ -89,7 +84,6 @@ int main (int argc, char *argv[]) {
     // Team 1 (red)
     Character player1_1(Vector2(100.0f, WORLD_H / 2.0f - 50.0f), red_texture, 100.0f, 100.0f);
     Character player1_2(Vector2(100.0f, WORLD_H / 2.0f + 50.0f), red_texture, 100.0f, 100.0f);
-    AnimatedSprite sprite(renderer, "assets/pictures/PlayerShooting.png", 24, 16, 5, 120); 
 
     // Team 2 (blue)
     Character player2_1(Vector2(WORLD_W - 100.0f, WORLD_H / 2.0f - 50.0f), blue_texture, 100.0f, 100.0f);
@@ -104,11 +98,6 @@ int main (int argc, char *argv[]) {
     InputHandler input_handler(InputSet::INPUT_1, &player1_1, &player1_2);
     InputHandler input_handler2(InputSet::INPUT_2, &player2_1, &player2_2);
 
-    BlackHole blackhole(Vector2(WORLD_W / 2.0f, WORLD_H / 2.0f), 
-                    nullptr, // No sprite for now, it will be debug-drawn
-                    120.0f, 60.0f, // outer radius, inner radius
-                    5.0f, 15.0f);  // outer dps, inner dps
-
     std::vector<Bullet*> bullet_list;
 
     std::vector<IUpdatable*> updatable_list;
@@ -117,7 +106,6 @@ int main (int argc, char *argv[]) {
     }
     updatable_list.push_back(&input_handler);
     updatable_list.push_back(&input_handler2);
-    updatable_list.push_back(&blackhole);
     //
 
     // main loop
@@ -135,7 +123,6 @@ int main (int argc, char *argv[]) {
             }
         }
 
-
         // Update game logic
         Uint32 current_time = SDL_GetTicks();
         float delta_time = (current_time - last_time) / 1000.0f;
@@ -152,21 +139,16 @@ int main (int argc, char *argv[]) {
 
         // check for collision
         for (auto& bullet : bullet_list) {
-            blackhole.collide(*bullet);
             for (auto& character : characters) {
                 character->collide(*bullet);
             }
-        }
-
-        for (auto& character : characters) {
-            blackhole.collide(*character);
         }
 
         // --- Rendering ---
         SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF); // Set draw color to white
         SDL_RenderClear(renderer);                            // Clear the screen
 
-        // Render character sprites
+        // Render characters
         for (auto& character : characters) {
             Vector2 pos = character->get_position();
             const SDL_Texture* tex = character->get_sprite();
@@ -174,22 +156,13 @@ int main (int argc, char *argv[]) {
                 SDL_Rect dstRect = { (int)pos.x - 8, (int)pos.y - 8, 16, 16 };
                 SDL_RenderCopy(renderer, const_cast<SDL_Texture*>(tex), NULL, &dstRect);
             }
+            character->render(renderer);
         }
 
         // render bullets
         for (Bullet* bullet : bullet_list) {
             IRenderable* obj = dynamic_cast<IRenderable*>(bullet);
             obj->render(renderer);
-        }
-        // render hitbox blackhole
-        for (HitBox* hb : blackhole.get_hitboxes()) {
-            hb->debug_draw(renderer, {0, 0, 255, 255}); // Blue to see it clearly
-        }
-
-
-        // Render activation circles on top of everything
-        for (auto& character : characters) {
-            character->render(renderer);
         }
 
 

@@ -5,7 +5,11 @@
 #include <SDL2/SDL_keycode.h>
 #include <vector>
 
-InputHandler::InputHandler(InputSet input_set, IInputObject& char_, std::vector<IInputObject*> char_list) : _input_set(input_set), _activated_char(char_), _char_list(char_list) {}
+InputHandler::InputHandler(InputSet input_set, IInputObject* activated_char, IInputObject* unactivated_char) : _input_set(input_set), _activated_char(activated_char), _unactivated_char(unactivated_char) {
+    this->_activated_char->set_activate(true);
+    this->_activated_char->set_input_set((int)this->_input_set);
+    this->_unactivated_char->set_input_set((int)this->_input_set);
+}
 
 void InputHandler::handle_event(SDL_Event& event, std::vector<Bullet*>& bullet_list, ResourceManager& resource_manager) {
     if (event.type == SDL_KEYDOWN || event.type == SDL_KEYUP) {
@@ -18,8 +22,18 @@ void InputHandler::handle_event(SDL_Event& event, std::vector<Bullet*>& bullet_l
                     case SDLK_s: _down = key_down; break;
                     case SDLK_a: _left = key_down; break;
                     case SDLK_d: _right = key_down; break;
+                    case SDLK_LSHIFT:
+                        if (key_down) {
+                            this->_activated_char->set_activate(false);
+                            this->_activated_char->set_direction(ZERO);
+                            IInputObject* tmp_char = _activated_char;
+                            _activated_char = _unactivated_char;
+                            _unactivated_char = tmp_char;
+                            this->_activated_char->set_activate(true);
+                        }
+                        break;
                     case SDLK_SPACE:
-                        if (key_down) { _activated_char.shoot(bullet_list, resource_manager); }
+                        if (key_down) { _activated_char->shoot(bullet_list, resource_manager); }
                         break;
                 }
                 break;
@@ -29,8 +43,18 @@ void InputHandler::handle_event(SDL_Event& event, std::vector<Bullet*>& bullet_l
                     case SDLK_DOWN: _down = key_down; break;
                     case SDLK_LEFT: _left = key_down; break;
                     case SDLK_RIGHT: _right = key_down; break;
+                    case SDLK_RSHIFT:
+                        if (key_down) {
+                            this->_activated_char->set_activate(false);
+                            this->_activated_char->set_direction(ZERO);
+                            IInputObject* tmp_char = _activated_char;
+                            _activated_char = _unactivated_char;
+                            _unactivated_char = tmp_char;
+                            this->_activated_char->set_activate(true);
+                        }
+                        break;
                     case SDLK_RETURN: // Enter key
-                        if (key_down) { _activated_char.shoot(bullet_list, resource_manager); }
+                        if (key_down) { _activated_char->shoot(bullet_list, resource_manager); }
                         break;
                 }
                 break;
@@ -49,5 +73,5 @@ void InputHandler::update(float delta_time) {
         direction.normalize();
     }
 
-    _activated_char.set_direction(direction);
+    _activated_char->set_direction(direction);
 }

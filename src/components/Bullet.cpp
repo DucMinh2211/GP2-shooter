@@ -6,8 +6,8 @@
 #include "inc/OBB.h"
 #include <iostream>
 
-Bullet::Bullet(Vector2 position, SDL_Texture* sprite, float speed, float damage, Vector2 init_direction, BulletBuffType buffed)
-    : Entity(position, sprite, BULLET_SPEED), _damage(damage), _init_direction(init_direction), _buffed(buffed) {}
+Bullet::Bullet(Vector2 position, SDL_Texture* sprite, float speed, float damage, Vector2 init_direction, BulletBuffType buffed, int team_id)
+    : Entity(position, sprite, BULLET_SPEED), _team_id(team_id), _damage(damage), _init_direction(init_direction), _buffed(buffed) {}
 
 void Bullet::add_hitbox(HitBox* hitbox) {
     _hitbox_list.push_back(hitbox);
@@ -25,7 +25,6 @@ void Bullet::update_hitboxes() {
     }
 }
 
-
 void Bullet::render(SDL_Renderer* renderer) {
     SDL_Rect srcRect = {4, 0, 20, 24}; // bullet sprite in sheet
     SDL_Rect bullet_rect = { (int)this->_position.x, (int)this->_position.y, 24, 24 };
@@ -41,9 +40,19 @@ void Bullet::render(SDL_Renderer* renderer) {
 }
 
 void Bullet::update(float delta_time) {
-    // Move bullet
-    _position += _init_direction * _speed * delta_time;
+    // Calculate velocity and apply force
+    Vector2 initial_velocity = _init_direction * _speed;
+    Vector2 final_velocity = initial_velocity + _force;
+    _position += final_velocity * delta_time;
+    
     update_hitboxes();
+
+    // Reset force for the next frame
+    _force = ZERO;
+}
+
+void Bullet::add_force(Vector2 force) {
+    _force += force;
 }
 
 void Bullet::collide(ICollidable& object) {
