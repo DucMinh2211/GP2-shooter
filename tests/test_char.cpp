@@ -51,31 +51,21 @@ int main (int argc, char *argv[]) {
 
     ResourceManager resource_manager(renderer);
 
-    // Create a red texture for team 1
-    SDL_Surface* red_surface = SDL_CreateRGBSurface(0, 16, 16, 32, 0, 0, 0, 0);
-    SDL_FillRect(red_surface, NULL, SDL_MapRGB(red_surface->format, 255, 0, 0));
+    // Create a transparent texture for team 1
+    SDL_Surface* red_surface = SDL_CreateRGBSurface(0, 16, 16, 32,
+        0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000); // RGBA masks
+    SDL_FillRect(red_surface, NULL, SDL_MapRGBA(red_surface->format, 0, 0, 0, 0));
     SDL_Texture* red_texture = SDL_CreateTextureFromSurface(renderer, red_surface);
     SDL_FreeSurface(red_surface);
-    if (red_texture == nullptr) {
-        std::cerr << "Texture creation failed" << SDL_GetError();
-        SDL_DestroyRenderer(renderer);
-        SDL_DestroyWindow(window);
-        SDL_Quit();
-        return EXIT_FAILURE;
-    }
+    SDL_SetTextureBlendMode(red_texture, SDL_BLENDMODE_BLEND); // cho phép alpha
 
-    // Create a blue texture for team 2
-    SDL_Surface* blue_surface = SDL_CreateRGBSurface(0, 16, 16, 32, 0, 0, 0, 0);
-    SDL_FillRect(blue_surface, NULL, SDL_MapRGB(blue_surface->format, 0, 0, 255));
+    // Create a transparent texture for team 2
+    SDL_Surface* blue_surface = SDL_CreateRGBSurface(0, 16, 16, 32,
+        0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000); // RGBA masks
+    SDL_FillRect(blue_surface, NULL, SDL_MapRGBA(blue_surface->format, 0, 0, 0, 0));
     SDL_Texture* blue_texture = SDL_CreateTextureFromSurface(renderer, blue_surface);
     SDL_FreeSurface(blue_surface);
-    if (blue_texture == nullptr) {
-        std::cerr << "Texture creation failed" << SDL_GetError();
-        SDL_DestroyRenderer(renderer);
-        SDL_DestroyWindow(window);
-        SDL_Quit();
-        return EXIT_FAILURE;
-    }
+    SDL_SetTextureBlendMode(blue_texture, SDL_BLENDMODE_BLEND);
 
     if (!resource_manager.load_texture("bullet", "assets/pictures/bulletA.png")) {
         std::cerr << "Failed to load bullet sprite!\n";
@@ -92,11 +82,17 @@ int main (int argc, char *argv[]) {
     AnimatedSprite idle(renderer, "assets/pictures/PlayerIdle.png", 24, 16, 5, 100);
     AnimatedSprite run(renderer,  "assets/pictures/PlayerRunning.png", 24, 16, 5, 100);
     AnimatedSprite shoot(renderer,"assets/pictures/PlayerShooting.png", 24, 16, 5, 100);
+    AnimatedSprite idle1(renderer, "assets/pictures/tocvangdung.png", 24, 16, 5, 100);
+    AnimatedSprite run1(renderer,  "assets/pictures/tocvangchay.png", 24, 16, 5, 100);
+    AnimatedSprite shoot1(renderer,"assets/pictures/tocvangban.png", 24, 16, 5, 100);
     player1_1.set_animations(&idle, &run, &shoot);
+    player1_2.set_animations(&idle1, &run1, &shoot1);
+    
     // Team 2 (blue)
     Character player2_1(Vector2(WORLD_W - 100.0f, WORLD_H / 2.0f - 50.0f), blue_texture, 100.0f, 100.0f);
     Character player2_2(Vector2(WORLD_W - 100.0f, WORLD_H / 2.0f + 50.0f), blue_texture, 100.0f, 100.0f);
-
+    player2_1.set_animations(&idle, &run, &shoot);
+    player2_2.set_animations(&idle1, &run1, &shoot1);
     std::vector<Character*> characters;
     characters.push_back(&player1_1);
     characters.push_back(&player1_2);
@@ -187,6 +183,7 @@ int main (int argc, char *argv[]) {
         for (HitBox* hb : blackhole.get_hitboxes()) {
             hb->debug_draw(renderer, {0, 0, 255, 255}); // Blue to see it clearly
         }
+
 
 
         // Render activation circles on top of everything

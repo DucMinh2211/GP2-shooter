@@ -12,7 +12,6 @@
 #include <typeinfo>
 #include "Constant.h"
 #include "inc/OBB.h"
-#include "inc/Circle.h"
 
 Character::Character(Vector2 position, SDL_Texture* sprite, float speed, float health) : Entity(position, sprite, speed), _health(health) {
     // init buff_list
@@ -53,8 +52,13 @@ void Character::update(float delta_time) {
     }
 
     Vector2 velocity = _direction * _speed + _force;
-    _position += velocity * delta_time;
 
+    _position += velocity * delta_time;
+    for (auto* hb : _hitbox_list) {
+    if (auto* obb = dynamic_cast<OBB*>(hb)) {
+        obb->set_transform(_position, _angle); // cập nhật center và góc
+    }
+}
     // cập nhật shoot timer
     if (_shoot_timer > 0.0f) {
         _shoot_timer -= delta_time;
@@ -67,7 +71,7 @@ void Character::update(float delta_time) {
 
     if (_current_anim)
         _current_anim->update(delta_time);
-
+    _force = Vector2{0,0};
     // reset lực hoặc flag nếu muốn
 }
 
