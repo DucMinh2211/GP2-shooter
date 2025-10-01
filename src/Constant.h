@@ -1,5 +1,7 @@
 #define GAME_TITLE "shooter"
-#define WINDOW_W 800
-#define WINDOW_H 600
+#define WORLD_W 1280
+#define WORLD_H 720
+#define WINDOW_W 1600
+#define WINDOW_H 900
 #define PI 3.14159265f
-#define BULLET_SPEED 100.0f
+#define BULLET_SPEED 500.0f
