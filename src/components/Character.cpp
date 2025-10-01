@@ -53,7 +53,9 @@ void Character::update(float delta_time) {
 
     Vector2 velocity = _direction * _speed + _force;
 
-    _position += velocity * delta_time;
+    // store last movement delta so collisions with walls can undo it
+    _last_move_vec = velocity * delta_time;
+    _position += _last_move_vec;
     for (auto* hb : _hitbox_list) {
     if (auto* obb = dynamic_cast<OBB*>(hb)) {
         obb->set_transform(_position, _angle); // cập nhật center và góc
@@ -71,6 +73,14 @@ void Character::update(float delta_time) {
 
     if (_current_anim)
         _current_anim->update(delta_time);
+    _force = Vector2{0,0};
+
+    // Keep character inside world bounds (use character hitbox half-size of 8)
+    const float halfSize = 8.0f;
+    if (_position.x < halfSize) _position.x = halfSize;
+    if (_position.y < halfSize) _position.y = halfSize;
+    if (_position.x > WORLD_W - halfSize) _position.x = WORLD_W - halfSize;
+    if (_position.y > WORLD_H - halfSize) _position.y = WORLD_H - halfSize;
     _force = Vector2{0,0};
     // reset lực hoặc flag nếu muốn
 }
