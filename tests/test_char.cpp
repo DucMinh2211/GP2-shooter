@@ -17,6 +17,7 @@
 #include "components/inc/BlackHole.h"
 #include "components/inc/Circle.h"
 #include "components/inc/OBB.h"
+#include "components/inc/AnimatedSprite.h"
 
 
 
@@ -83,6 +84,7 @@ int main (int argc, char *argv[]) {
     }
 
     // setup
+    AnimatedSprite sprite(renderer, "assets/pictures/PlayerShooting.png", 24, 16, 5, 120); 
     Character player(Vector2(WINDOW_W / 2.0f - 50.0f, WINDOW_H / 2.0f), red_texture, 100.0f, 100.0f, true);
     Character player2(Vector2(WINDOW_W / 2.0f + 50.0f, WINDOW_H / 2.0f), black_texture, 100.0f, 100.0f, true);
 
@@ -124,6 +126,7 @@ int main (int argc, char *argv[]) {
                 input_handler2.handle_event(event, bullet_list, resource_manager);
             }
         }
+
 
         // Update game logic
         Uint32 current_time = SDL_GetTicks();
