@@ -31,7 +31,10 @@ void AnimatedSprite::update(float deltaTime) {
     }
 }
 
-void AnimatedSprite::render(SDL_Renderer* renderer, int x, int y, int scale) {
-    SDL_Rect dst = { x, y, frameWidth * scale, frameHeight * scale };
-    SDL_RenderCopy(renderer, texture, &clips[currentFrame], &dst);
+void AnimatedSprite::render(SDL_Renderer* renderer, int x, int y, int scale, double angle) {
+    int spriteW = 24;
+    int spriteH = 16;
+    SDL_Point center = { spriteW / 2 - 4, spriteH / 2 };
+    SDL_Rect dst = { x + 4, y, frameWidth * scale, frameHeight * scale };
+    SDL_RenderCopyEx(renderer, texture, &clips[currentFrame], &dst, angle, &center, SDL_FLIP_NONE);
 }

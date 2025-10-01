@@ -12,6 +12,7 @@
 #include <typeinfo>
 #include "Constant.h"
 #include "inc/OBB.h"
+#include "inc/Circle.h"
 
 Character::Character(Vector2 position, SDL_Texture* sprite, float speed, float health) : Entity(position, sprite, speed), _health(health) {
     // init buff_list
@@ -45,27 +46,31 @@ void update_character_hitboxes(Character* character) {
 }
 
 void Character::update(float delta_time) {
-    // Normalize the direction vector if it's not zero
-    if (this->_direction.length_squared() > 0) {
-        this->_direction.normalize();
+    if (_direction.length_squared() > 0) {
+        _direction.normalize();
+        _last_direction = _direction;
+        _angle = std::atan2(_direction.y, _direction.x);
     }
 
-    // Calculate velocity from input and speed
-    Vector2 input_velocity = this->_direction * this->_speed;
+    Vector2 velocity = _direction * _speed + _force;
+    _position += velocity * delta_time;
 
-    // Combine with external forces from the previous frame's collisions
-    Vector2 final_velocity = input_velocity + this->_force;
+    // cập nhật shoot timer
+    if (_shoot_timer > 0.0f) {
+        _shoot_timer -= delta_time;
+        _current_anim = _shoot_anim;
+    } else if (_direction.length_squared() == 0) {
+        _current_anim = _idle_anim;
+    } else {
+        _current_anim = _run_anim;
+    }
 
-    // Store movement vector and update position
-    this->_last_move_vec = final_velocity * delta_time;
-    this->_position += this->_last_move_vec;
+    if (_current_anim)
+        _current_anim->update(delta_time);
 
-    // Update hitboxes to follow the character
-    update_character_hitboxes(this);
-
-    // Reset force for the next frame
-    _force = ZERO;
+    // reset lực hoặc flag nếu muốn
 }
+
 
 void Character::set_direction(Vector2 direction) {
     _direction = direction;
@@ -149,10 +154,18 @@ void Character::shoot(std::vector<Bullet*>& bullet_list, ResourceManager& resour
 
     // Push bullet vào danh sách
     bullet_list.push_back(bullet);
+    _shoot_timer = _shoot_duration; 
 }
 
 void Character::render(SDL_Renderer* renderer) {
     // TODO: implement
+    if (_current_anim) {
+    Vector2 pos = get_position();
+    double angle_deg = _angle * 180.0 / M_PI;
+    _current_anim->render(renderer, (int)pos.x - 12, (int)pos.y - 8, 1,angle_deg);
+    }
+
+
 
     if (this->_activated) this->render_activated_circle(renderer);
 }

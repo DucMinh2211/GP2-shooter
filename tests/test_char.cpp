@@ -17,7 +17,7 @@
 #include "components/inc/BlackHole.h"
 #include "components/inc/Circle.h"
 #include "components/inc/OBB.h"
-#include "components/inc/AnimatedSprite.h"
+
 
 
 
@@ -89,8 +89,10 @@ int main (int argc, char *argv[]) {
     // Team 1 (red)
     Character player1_1(Vector2(100.0f, WORLD_H / 2.0f - 50.0f), red_texture, 100.0f, 100.0f);
     Character player1_2(Vector2(100.0f, WORLD_H / 2.0f + 50.0f), red_texture, 100.0f, 100.0f);
-    AnimatedSprite sprite(renderer, "assets/pictures/PlayerShooting.png", 24, 16, 5, 120); 
-
+    AnimatedSprite idle(renderer, "assets/pictures/PlayerIdle.png", 24, 16, 5, 100);
+    AnimatedSprite run(renderer,  "assets/pictures/PlayerRunning.png", 24, 16, 5, 100);
+    AnimatedSprite shoot(renderer,"assets/pictures/PlayerShooting.png", 24, 16, 5, 100);
+    player1_1.set_animations(&idle, &run, &shoot);
     // Team 2 (blue)
     Character player2_1(Vector2(WORLD_W - 100.0f, WORLD_H / 2.0f - 50.0f), blue_texture, 100.0f, 100.0f);
     Character player2_2(Vector2(WORLD_W - 100.0f, WORLD_H / 2.0f + 50.0f), blue_texture, 100.0f, 100.0f);

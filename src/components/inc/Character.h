@@ -7,6 +7,8 @@
 #include "IRenderable.h"
 #include <unordered_map>
 #include <vector>
+#include "AnimatedSprite.h"
+
 
 // forward decl
 class ResourceManager;
@@ -40,6 +42,14 @@ private:
     BulletBuff _gun_buffed = BulletBuff(INFINITY, BulletBuffType::NONE);
     std::vector<CharBuff> _buff_list;
     Vector2 _last_move_vec = ZERO;
+    AnimatedSprite* _idle_anim = nullptr;
+    AnimatedSprite* _run_anim = nullptr;
+    AnimatedSprite* _shoot_anim = nullptr;
+
+    AnimatedSprite* _current_anim = nullptr; // animation đang sử dụng
+    float _angle = 0.0f; // góc xoay theo hướng di chuyển
+    float _shoot_timer = 0.0f; // thời gian còn lại cho animation bắn
+    float _shoot_duration = 0.5f; // tổng thời gian animation bắn (giây)
 
 
 public:
@@ -59,4 +69,10 @@ public:
     // Public API for state modification
     void take_damage(float amount);
     void add_force(Vector2 force);
+    void set_animations(AnimatedSprite* idle, AnimatedSprite* run, AnimatedSprite* shoot) {
+        _idle_anim = idle;
+        _run_anim  = run;
+        _shoot_anim = shoot;
+        _current_anim = _idle_anim;
+    }
 };

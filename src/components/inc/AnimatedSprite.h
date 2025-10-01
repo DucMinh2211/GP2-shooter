@@ -10,7 +10,9 @@ public:
     ~AnimatedSprite();
 
     void update(float deltaTime);
-    void render(SDL_Renderer* renderer, int x, int y, int scale = 1);
+    void render(SDL_Renderer* renderer, int x, int y, int scale = 1, double angle = 0.0);
+    SDL_Texture* get_texture() const { return texture; }
+
 
 private:
     SDL_Texture* texture;
