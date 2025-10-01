@@ -17,6 +17,7 @@
 #include "components/inc/BlackHole.h"
 #include "components/inc/Circle.h"
 #include "components/inc/OBB.h"
+#include "components/inc/Explosion.h"
 
 
 
@@ -84,6 +85,7 @@ int main (int argc, char *argv[]) {
 
     // setup
     // Team 1 (red)
+    
     Character player1_1(Vector2(100.0f, WORLD_H / 2.0f - 50.0f), red_texture, 100.0f, 100.0f);
     Character player1_2(Vector2(100.0f, WORLD_H / 2.0f + 50.0f), red_texture, 100.0f, 100.0f);
     AnimatedSprite idle(renderer, "assets/pictures/PlayerIdle.png", 24, 16, 5, 100);
@@ -116,6 +118,9 @@ int main (int argc, char *argv[]) {
                     5.0f, 15.0f);  // outer dps, inner dps
     blackhole.set_animation(&blackhole_anim);
     std::vector<Bullet*> bullet_list;
+    // Explosions for testing (150x150 frames, 12 frames, 3 columns)
+    std::vector<Explosion*> explosions;
+    
 
     std::vector<IUpdatable*> updatable_list;
     for (Character* ch : characters) {
@@ -138,6 +143,12 @@ int main (int argc, char *argv[]) {
             else {
                 input_handler.handle_event(event, bullet_list, resource_manager);
                 input_handler2.handle_event(event, bullet_list, resource_manager);
+                // Spawn explosion on E key press
+                if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_E) {
+                    Vector2 pos = blackhole.get_position() - Vector2(50, 50); 
+                    Explosion* e = new Explosion(renderer, "assets/pictures/rielno.png", pos, 50, 50, 9, 40, 3);
+                    explosions.push_back(e);
+                }
             }
         }
 
@@ -155,6 +166,14 @@ int main (int argc, char *argv[]) {
             bullet->update(delta_time);
         }
 
+        // Update explosions and remove finished ones
+        for (auto* e : explosions) e->update(delta_time);
+        // remove finished
+        explosions.erase(std::remove_if(explosions.begin(), explosions.end(), [](Explosion* e){
+            if (e->is_finished()) { delete e; return true; }
+            return false;
+        }), explosions.end());
+
 
         // check for collision
         for (auto& bullet : bullet_list) {
@@ -169,7 +188,7 @@ int main (int argc, char *argv[]) {
         }
 
         // --- Rendering ---
-        SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF); // Set draw color to black
+        SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0x00); // Set draw color to black
         SDL_RenderClear(renderer);                            // Clear the screen
 
         // Render character sprites
@@ -189,6 +208,15 @@ int main (int argc, char *argv[]) {
         }
         // render black hole animation/sprite
         blackhole.render(renderer);
+    // render explosions
+    for (auto* e : explosions) 
+    {
+        e->render(renderer);
+        for (auto* hb : e->get_hitboxes()) {
+            hb->debug_draw(renderer, {255, 0, 0, 255}); // Red to see it clearly
+        }
+    }
+    
         // render hitbox blackhole
         // for (HitBox* hb : blackhole.get_hitboxes()) {
         //     hb->debug_draw(renderer, {0, 0, 255, 255}); // Blue to see it clearly
