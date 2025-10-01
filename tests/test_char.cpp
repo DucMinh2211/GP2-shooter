@@ -112,7 +112,7 @@ int main (int argc, char *argv[]) {
 
     BlackHole blackhole(Vector2(WORLD_W / 2.0f, WORLD_H / 2.0f), 
                     nullptr, // No sprite for now, it will be debug-drawn
-                    60.0f, 30.0f, // outer radius, inner radius
+                    65.0f, 30.0f, // outer radius, inner radius
                     5.0f, 15.0f);  // outer dps, inner dps
     blackhole.set_animation(&blackhole_anim);
     std::vector<Bullet*> bullet_list;
@@ -169,7 +169,7 @@ int main (int argc, char *argv[]) {
         }
 
         // --- Rendering ---
-        SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF); // Set draw color to white
+        SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF); // Set draw color to black
         SDL_RenderClear(renderer);                            // Clear the screen
 
         // Render character sprites
@@ -190,13 +190,13 @@ int main (int argc, char *argv[]) {
         // render black hole animation/sprite
         blackhole.render(renderer);
         // render hitbox blackhole
-        for (HitBox* hb : blackhole.get_hitboxes()) {
-            hb->debug_draw(renderer, {0, 0, 255, 255}); // Blue to see it clearly
-        }
+        // for (HitBox* hb : blackhole.get_hitboxes()) {
+        //     hb->debug_draw(renderer, {0, 0, 255, 255}); // Blue to see it clearly
+        // }
 
-        for (HitBox* hb : player1_1.get_hitboxes()) {
-            hb->debug_draw(renderer, {0, 0, 255, 255}); // Blue to see it clearly
-        }
+        // for (HitBox* hb : player1_1.get_hitboxes()) {
+        //     hb->debug_draw(renderer, {0, 0, 255, 255}); // Blue to see it clearly
+        // }
 
 
         // Render activation circles on top of everything
