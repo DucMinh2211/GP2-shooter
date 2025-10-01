@@ -28,6 +28,13 @@ int main (int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
+    // Initialize SDL_image
+    if (!(IMG_Init(IMG_INIT_PNG) & IMG_INIT_PNG)) {
+        std::cerr << "IMG_Init failed: " << IMG_GetError();
+        SDL_Quit();
+        return EXIT_FAILURE;
+    }
+
     // Init Window
     SDL_Window* window = SDL_CreateWindow(GAME_TITLE, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WINDOW_W, WINDOW_H,SDL_WINDOW_SHOWN );
     if (window == nullptr) {
@@ -85,6 +92,7 @@ int main (int argc, char *argv[]) {
     AnimatedSprite idle1(renderer, "assets/pictures/tocvangdung.png", 24, 16, 5, 100);
     AnimatedSprite run1(renderer,  "assets/pictures/tocvangchay.png", 24, 16, 5, 100);
     AnimatedSprite shoot1(renderer,"assets/pictures/tocvangban.png", 24, 16, 5, 100);
+    AnimatedSprite blackhole_anim(renderer, "assets/pictures/output.png", 200, 200, 12, 100,3);
     player1_1.set_animations(&idle, &run, &shoot);
     player1_2.set_animations(&idle1, &run1, &shoot1);
     
@@ -104,9 +112,9 @@ int main (int argc, char *argv[]) {
 
     BlackHole blackhole(Vector2(WORLD_W / 2.0f, WORLD_H / 2.0f), 
                     nullptr, // No sprite for now, it will be debug-drawn
-                    120.0f, 60.0f, // outer radius, inner radius
+                    60.0f, 30.0f, // outer radius, inner radius
                     5.0f, 15.0f);  // outer dps, inner dps
-
+    blackhole.set_animation(&blackhole_anim);
     std::vector<Bullet*> bullet_list;
 
     std::vector<IUpdatable*> updatable_list;
@@ -179,11 +187,16 @@ int main (int argc, char *argv[]) {
             IRenderable* obj = dynamic_cast<IRenderable*>(bullet);
             obj->render(renderer);
         }
+        // render black hole animation/sprite
+        blackhole.render(renderer);
         // render hitbox blackhole
         for (HitBox* hb : blackhole.get_hitboxes()) {
             hb->debug_draw(renderer, {0, 0, 255, 255}); // Blue to see it clearly
         }
 
+        for (HitBox* hb : player1_1.get_hitboxes()) {
+            hb->debug_draw(renderer, {0, 0, 255, 255}); // Blue to see it clearly
+        }
 
 
         // Render activation circles on top of everything

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Obstacle.h"
+#include "AnimatedSprite.h"
 
 // Forward declaration
 class Character;
@@ -15,11 +16,14 @@ private:
     // Lists to track colliding characters
     std::vector<Character*> _characters_in_outer_zone;
     std::vector<Character*> _characters_in_inner_zone;
+    AnimatedSprite* _anim = nullptr;
 
 public:
     BlackHole(Vector2 pos, SDL_Texture* sprite, float outer_radius, float inner_radius,
               float dps_outer = 5.0f, float dps_inner = 15.0f);
     ~BlackHole();
+
+    void set_animation(AnimatedSprite* anim) { _anim = anim; }
 
     void collide(ICollidable& object) override;
     void update(float delta_time) override;

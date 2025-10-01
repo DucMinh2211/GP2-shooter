@@ -87,11 +87,17 @@ void BlackHole::collide(ICollidable& object) {
 
 // Logic has been moved to collide(), as requested.
 void BlackHole::update(float delta_time) {
-    // Empty
+    if (_anim) _anim->update(delta_time);
 }
 
 // Render the black hole's sprite.
 void BlackHole::render(SDL_Renderer* renderer) {
+    if (_anim) {
+        // AnimatedSprite render expects x,y center by our earlier change
+        _anim->render(renderer, (int)_position.x - 213, (int)_position.y - 205, 2, 0.0);
+        return;
+    }
+
     if (!_sprite) return;
 
     int w, h;

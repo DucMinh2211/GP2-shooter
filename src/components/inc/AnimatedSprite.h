@@ -1,3 +1,5 @@
+#pragma once
+
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <vector>
@@ -6,7 +8,7 @@
 class AnimatedSprite {
 public:
     AnimatedSprite(SDL_Renderer* renderer, const std::string& spritesheet,
-                   int frameWidth, int frameHeight, int frameCount, int frameTime);
+                   int frameWidth, int frameHeight, int frameCount, int frameTime, int columns = 1);
     ~AnimatedSprite();
 
     void update(float deltaTime);

@@ -33,10 +33,10 @@ void Bullet::render(SDL_Renderer* renderer) {
 
 
     //Debug hibox | comment sau khi debug xong
-    SDL_Color debugColor = {255, 0, 0, 255};
-    for (auto* hitbox : _hitbox_list) {
-        hitbox->debug_draw(renderer, debugColor);
-    }
+    // SDL_Color debugColor = {255, 0, 0, 255};
+    // for (auto* hitbox : _hitbox_list) {
+    //     hitbox->debug_draw(renderer, debugColor);
+    // }
 }
 
 void Bullet::update(float delta_time) {
