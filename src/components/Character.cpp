@@ -105,7 +105,8 @@ void Character::set_direction(Vector2 direction) {
     _direction = direction;
     if (_direction.length_squared() > 0) {
         _last_direction = _direction; // chỉ update khi có hướng di chuyển
-        _angle = std::atan2(_direction.y, _direction.x) * 180.0f / PI;
+           // store angle in radians for hitbox transforms and internal logic
+           _angle = std::atan2(_direction.y, _direction.x);
     }
 }
 
@@ -197,6 +198,10 @@ void Character::shoot(std::vector<Bullet*>& bullet_list, ResourceManager& resour
 
 
     SDL_Texture* bullet_sprite = resource_manager.get_texture("bullet");
+    if (!bullet_sprite) {
+        // No bullet sprite available; skip creating bullets to avoid rendering null textures
+        return;
+    }
     // Create a bullet at the character's position, facing _direction
     Vector2 bullet_dir = (_direction.length_squared() > 0) ? _direction : _last_direction;
     Vector2 bullet_pos = {_position.x,_position.y };

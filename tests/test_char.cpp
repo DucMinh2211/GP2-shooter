@@ -16,18 +16,14 @@
 #include "components/inc/InputHandler.h"
 #include "components/inc/Bullet.h"
 #include "components/inc/BlackHole.h"
-<<<<<<< HEAD
-#include "components/inc/Circle.h"
-#include "components/inc/OBB.h"
-#include "components/inc/Explosion.h"
-=======
 #include "components/inc/AnimatedSprite.h"
 #include "components/inc/BuffItem.h"
 #include "components/inc/Explosion.h"
 #include "components/inc/Wall.h"
+#include "components/inc/BloodSplash.h"
+#include "components/inc/Smoke.h"
 #include <string>
 #include <sstream>
->>>>>>> origin/main
 
 
 
@@ -63,22 +59,6 @@ int main (int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-<<<<<<< HEAD
-    // Set the logical size for rendering to scale the world to the window
-    SDL_RenderSetLogicalSize(renderer, WORLD_W, WORLD_H);
-
-
-    ResourceManager resource_manager(renderer);
-
-    // Create a transparent texture for team 1
-    SDL_Surface* red_surface = SDL_CreateRGBSurface(0, 16, 16, 32,
-        0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000); // RGBA masks
-    SDL_FillRect(red_surface, NULL, SDL_MapRGBA(red_surface->format, 0, 0, 0, 0));
-    SDL_Texture* red_texture = SDL_CreateTextureFromSurface(renderer, red_surface);
-    SDL_FreeSurface(red_surface);
-    SDL_SetTextureBlendMode(red_texture, SDL_BLENDMODE_BLEND); // cho phép alpha
-
-=======
     // Initialize TTF
     if (TTF_Init() == -1) {
         std::cerr << "TTF_Init failed: " << TTF_GetError() << std::endl;
@@ -112,7 +92,6 @@ int main (int argc, char *argv[]) {
     SDL_FreeSurface(red_surface);
     SDL_SetTextureBlendMode(red_texture, SDL_BLENDMODE_BLEND); // cho phép alpha
 
->>>>>>> origin/main
     // Create a transparent texture for team 2
     SDL_Surface* blue_surface = SDL_CreateRGBSurface(0, 16, 16, 32,
         0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000); // RGBA masks
@@ -120,8 +99,6 @@ int main (int argc, char *argv[]) {
     SDL_Texture* blue_texture = SDL_CreateTextureFromSurface(renderer, blue_surface);
     SDL_FreeSurface(blue_surface);
     SDL_SetTextureBlendMode(blue_texture, SDL_BLENDMODE_BLEND);
-<<<<<<< HEAD
-=======
 
     // Create a green texture for buff items
     SDL_Surface* green_surface = SDL_CreateRGBSurface(0, 16, 16, 32, 0, 255, 0, 0);
@@ -135,7 +112,6 @@ int main (int argc, char *argv[]) {
         SDL_Quit();
         return EXIT_FAILURE;
     }
->>>>>>> origin/main
 
     if (!resource_manager.load_texture("bullet", "assets/pictures/bulletA.png")) {
         std::cerr << "Failed to load bullet sprite!\n";
@@ -156,13 +132,8 @@ int main (int argc, char *argv[]) {
     // setup
     // Team 1 (red)
     
-<<<<<<< HEAD
-    Character player1_1(Vector2(100.0f, WORLD_H / 2.0f - 50.0f), red_texture, 100.0f, 100.0f);
-    Character player1_2(Vector2(100.0f, WORLD_H / 2.0f + 50.0f), red_texture, 100.0f, 100.0f);
-=======
     Character player1_1(Vector2(100.0f, WORLD_H / 2.0f - 50.0f), red_texture, 200.0f, 100.0f);
     Character player1_2(Vector2(100.0f, WORLD_H / 2.0f + 90.0f), red_texture, 200.0f, 100.0f);
->>>>>>> origin/main
     AnimatedSprite idle(renderer, "assets/pictures/PlayerIdle.png", 24, 16, 5, 100);
     AnimatedSprite run(renderer,  "assets/pictures/PlayerRunning.png", 24, 16, 5, 100);
     AnimatedSprite shoot(renderer,"assets/pictures/PlayerShooting.png", 24, 16, 5, 100);
@@ -175,11 +146,7 @@ int main (int argc, char *argv[]) {
     
     // Team 2 (blue)
     Character player2_1(Vector2(WORLD_W - 100.0f, WORLD_H / 2.0f - 50.0f), blue_texture, 100.0f, 100.0f);
-<<<<<<< HEAD
-    Character player2_2(Vector2(WORLD_W - 100.0f, WORLD_H / 2.0f + 50.0f), blue_texture, 100.0f, 100.0f);
-=======
     Character player2_2(Vector2(WORLD_W - 100.0f, WORLD_H / 2.0f + 90.0f), blue_texture, 100.0f, 100.0f);
->>>>>>> origin/main
     player2_1.set_animations(&idle, &run, &shoot);
     player2_2.set_animations(&idle1, &run1, &shoot1);
     std::vector<Character*> characters;
@@ -196,18 +163,17 @@ int main (int argc, char *argv[]) {
                     65.0f, 30.0f, // outer radius, inner radius
                     5.0f, 15.0f);  // outer dps, inner dps
     blackhole.set_animation(&blackhole_anim);
-<<<<<<< HEAD
-=======
 
     SDL_Texture* health_buff_texture = resource_manager.load_texture("health-buff", "assets/pictures/health-buff.png");
     BuffItem* health_buff = new BuffItem(Vector2(100, WORLD_H - 100.0f), health_buff_texture ? health_buff_texture : green_texture, CharBuffType::HEALTH);
 
     BuffItem* bounce_buff = new BuffItem(Vector2(160, WORLD_H - 100.0f), green_texture, BulletBuffType::BOUNCING);
 
->>>>>>> origin/main
     std::vector<Bullet*> bullet_list;
     // Explosions for testing (150x150 frames, 12 frames, 3 columns)
     std::vector<Explosion*> explosions;
+    std::vector<BloodSplash*> bloods;
+    std::vector<Smoke*> smokes;
     
 
     std::vector<IUpdatable*> updatable_list;
@@ -239,6 +205,17 @@ int main (int argc, char *argv[]) {
                     Explosion* e = new Explosion(renderer, "assets/pictures/rielno.png", pos, 50, 50, 9, 40, 3);
                     explosions.push_back(e);
                 }
+                // Spawn blood splash on J, smoke on K for testing
+                if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_j) {
+                    Vector2 pos = player1_1.get_position();
+                    BloodSplash* b = new BloodSplash(renderer, "assets/pictures/blood.png", pos, 16, 16, 8, 80, 3);
+                    bloods.push_back(b);
+                }
+                if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_k) {
+                    Vector2 pos = player2_1.get_position();
+                    Smoke* s = new Smoke(renderer, "assets/pictures/khoi.png", pos, 24, 24, 8, 80, 3);
+                    smokes.push_back(s);
+                }
             }
         }
 
@@ -258,11 +235,17 @@ int main (int argc, char *argv[]) {
 
         // Update explosions and remove finished ones
         for (auto* e : explosions) e->update(delta_time);
+    for (auto* b : bloods) b->update(delta_time);
+    for (auto* s : smokes) s->update(delta_time);
         // remove finished
         explosions.erase(std::remove_if(explosions.begin(), explosions.end(), [](Explosion* e){
             if (e->is_finished()) { delete e; return true; }
             return false;
         }), explosions.end());
+        // remove finished bloods
+        bloods.erase(std::remove_if(bloods.begin(), bloods.end(), [](BloodSplash* b){ if (b->is_finished()) { delete b; return true; } return false; }), bloods.end());
+        // remove finished smokes
+        smokes.erase(std::remove_if(smokes.begin(), smokes.end(), [](Smoke* s){ if (s->is_finished()) { delete s; return true; } return false; }), smokes.end());
 
 
         // check for collision
@@ -324,10 +307,7 @@ int main (int argc, char *argv[]) {
         }
         // render black hole animation/sprite
         blackhole.render(renderer);
-<<<<<<< HEAD
-=======
         far_wall.render(renderer);
->>>>>>> origin/main
     // render explosions
     for (auto* e : explosions) 
     {
@@ -336,6 +316,8 @@ int main (int argc, char *argv[]) {
             hb->debug_draw(renderer, {255, 0, 0, 255}); // Red to see it clearly
         }
     }
+        // render smoke effects (behind characters)
+        for (auto* s : smokes) s->render(renderer);
     
         // render hitbox blackhole
         // for (HitBox* hb : blackhole.get_hitboxes()) {
@@ -347,10 +329,14 @@ int main (int argc, char *argv[]) {
         // }
 
 
-        // Render activation circles on top of everything
+
+        // Render activation circles and characters
         for (auto& character : characters) {
             character->render(renderer);
         }
+
+        // Render blood effects on top of characters
+        for (auto* b : bloods) b->render(renderer);
 
         if (health_buff) {
             health_buff->render(renderer);

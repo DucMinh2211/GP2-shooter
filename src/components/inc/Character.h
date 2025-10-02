@@ -79,4 +79,8 @@ public:
         _dead_anim = dead;
         _current_anim = _idle_anim;
     }
+
+    // Expose gun type accessors for game-mode logic
+    GunType get_gun_type() const { return _gun_type; }
+    void set_gun_type(GunType gt) { _gun_type = gt; _shoot_delay = SHOOT_DELAY_MAP.at(_gun_type); }
 };

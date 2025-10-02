@@ -38,7 +38,9 @@ void Bullet::render(SDL_Renderer* renderer) {
     int w = 24, h = 24;
     SDL_Rect bullet_rect = { (int)this->_position.x - w/2, (int)this->_position.y - h/2, w, h };
     float angle = std::atan2(this->_init_direction.y, this->_init_direction.x) * 180.0f / PI;
-    SDL_RenderCopyEx(renderer, this->_sprite, &srcRect, &bullet_rect, angle, NULL, SDL_FLIP_NONE);
+    if (this->_sprite) {
+        SDL_RenderCopyEx(renderer, this->_sprite, &srcRect, &bullet_rect, angle, NULL, SDL_FLIP_NONE);
+    }
 
 
     //Debug hibox | comment sau khi debug xong
