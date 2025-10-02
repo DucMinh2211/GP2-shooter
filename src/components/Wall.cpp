@@ -54,4 +54,9 @@ void Wall::render(SDL_Renderer* renderer) {
         h
     };
     SDL_RenderCopy(renderer, _sprite, NULL, &dst_rect);
+
+    // Always draw hitbox outline for debugging (thin green rectangle)
+    for (auto* hb : this->get_hitboxes()) {
+        hb->debug_draw(renderer, {0, 255, 0, 255});
+    }
 }

@@ -19,6 +19,8 @@ public:
     // Lấy ra 4 đỉnh sau khi xoay
     std::vector<Vector2> get_corners() const;
     Vector2 get_center() const { return _center; }
+    Vector2 get_halfSize() const { return _halfSize; }
+    float get_angle() const { return _angle; }
 
     // Vẽ debug
     void debug_draw(SDL_Renderer* renderer, SDL_Color color) override;

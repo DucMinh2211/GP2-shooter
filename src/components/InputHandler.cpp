@@ -15,6 +15,21 @@ InputHandler::InputHandler(InputSet input_set, IInputObject* activated_char, IIn
     }
 }
 
+void InputHandler::on_character_death(IInputObject* dead) {
+    // If dead is the currently activated character, swap with unactivated (if present)
+    if (!dead) return;
+    if (dead == _activated_char) {
+        if (_activated_char) _activated_char->set_activate(false);
+        IInputObject* tmp = _activated_char;
+        _activated_char = _unactivated_char;
+        _unactivated_char = tmp;
+        if (_activated_char) _activated_char->set_activate(true);
+    } else if (dead == _unactivated_char) {
+        // simply clear reference to the unactivated char
+        _unactivated_char = nullptr;
+    }
+}
+
 void InputHandler::handle_event(SDL_Event& event, std::vector<Bullet*>& bullet_list, ResourceManager& resource_manager) {
     if (event.type == SDL_KEYDOWN || event.type == SDL_KEYUP) {
         bool key_down = (event.type == SDL_KEYDOWN);

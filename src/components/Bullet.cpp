@@ -36,7 +36,7 @@ void Bullet::update_hitboxes() {
 }
 
 void Bullet::explode(std::vector<Explosion*>& explosions, SDL_Renderer* renderer) {
-    explosions.push_back(new Explosion(renderer, EXPLOSION_TEXTURE_PATH, this->_position, 50, 50, 9 ,40, 3, 25.0f));
+    explosions.push_back(new Explosion(renderer, EXPLOSION_TEXTURE_PATH, this->_position, 50, 50, 9 ,40, 3, 25.0f, this->_team_id));
 }
 
 void Bullet::render(SDL_Renderer* renderer) {
@@ -44,9 +44,7 @@ void Bullet::render(SDL_Renderer* renderer) {
     int w = 24, h = 24;
     SDL_Rect bullet_rect = { (int)this->_position.x - w/2, (int)this->_position.y - h/2, w, h };
     float angle = std::atan2(this->_init_direction.y, this->_init_direction.x) * 180.0f / PI;
-    if (this->_sprite) {
-        SDL_RenderCopyEx(renderer, this->_sprite, &srcRect, &bullet_rect, angle, NULL, SDL_FLIP_NONE);
-    }
+    SDL_RenderCopyEx(renderer, this->_sprite, &srcRect, &bullet_rect, angle, NULL, SDL_FLIP_NONE);
 
 
     //Debug hibox | comment sau khi debug xong
@@ -57,6 +55,10 @@ void Bullet::render(SDL_Renderer* renderer) {
 }
 
 void Bullet::update(float delta_time) {
+    // calc _life_timer
+    this->_life_timer -= delta_time;
+    if (this->_life_timer <= 0) this->_is_destroyed = true;
+
     // Calculate velocity and apply force
     Vector2 initial_velocity = _init_direction * _speed;
     Vector2 final_velocity = initial_velocity + _force;
@@ -91,16 +93,70 @@ void Bullet::collide(ICollidable* object) {
                         // Do nothing (passes through)
                         return; // no further processing for this wall
                     } else if (isBouncing()) {
-                        // Reflect initial direction around collision normal approximation
-                        // Approximate normal: pick axis with greater penetration direction
-                        Vector2 diff = _position - ((OBB*)obb2)->get_center();
-                        if (std::abs(diff.x) > std::abs(diff.y)) {
-                            _init_direction.x = -_init_direction.x; // reflect horizontally
-                        } else {
-                            _init_direction.y = - _init_direction.y; // reflect vertically
+                        // Proper reflection using OBB closest point normal
+                        OBB* other = static_cast<OBB*>(obb2);
+                        Vector2 C = other->get_center();
+                        Vector2 half = other->get_halfSize();
+                        float a = other->get_angle();
+
+                        // Helpers: rotate point by angle
+                        auto rotate = [&](const Vector2& p, float ang) {
+                            float ca = std::cos(ang);
+                            float sa = std::sin(ang);
+                            return Vector2(p.x * ca - p.y * sa, p.x * sa + p.y * ca);
+                        };
+
+                        // transform point into OBB local space
+                        Vector2 local = rotate(_position - C, -a);
+
+                        // clamp to box extents
+                        Vector2 clamped = local;
+                        if (clamped.x > half.x) clamped.x = half.x;
+                        if (clamped.x < -half.x) clamped.x = -half.x;
+                        if (clamped.y > half.y) clamped.y = half.y;
+                        if (clamped.y < -half.y) clamped.y = -half.y;
+
+                        // closest point in world space
+                        Vector2 closest = rotate(clamped, a) + C;
+
+                        Vector2 normal = _position - closest;
+                        float nlen = normal.length();
+                        if (nlen == 0.0f) {
+                            // Degenerate: fallback to direction from box center
+                            normal = (_position - C);
+                            nlen = normal.length();
+                            if (nlen == 0.0f) {
+                                // give an arbitrary normal
+                                normal = Vector2(0.0f, -1.0f);
+                                nlen = 1.0f;
+                            }
                         }
-                        // Normalize and slightly reduce speed to avoid infinite loops (optional)
-                        _init_direction.normalize();
+                        normal /= nlen; // normalize
+
+                        // incoming velocity (including transient force)
+                        Vector2 incoming = _init_direction * _speed + _force;
+                        // reflect: r = v - 2*(v·n)*n
+                        float dotvn = Vector2::dot(incoming, normal);
+                        Vector2 reflected = incoming - normal * (2.0f * dotvn);
+
+                        // set new direction from reflected vector (only direction matters)
+                        if (reflected.length_squared() > 0.0f) {
+                            reflected.normalize();
+                            _init_direction = reflected;
+                        } else {
+                            // fallback: flip one axis
+                            _init_direction.x = -_init_direction.x;
+                            _init_direction.y = -_init_direction.y;
+                            _init_direction.normalize();
+                        }
+
+                        // reset transient forces so next frame uses only the new direction
+                        _force = ZERO;
+
+                        // Nudge bullet out along normal a small amount to avoid re-penetration
+                        const float nudge = 1.5f;
+                        _position += normal * nudge;
+
                         // Update hitbox orientation after bounce
                         update_hitboxes();
                         return; // bounce handled

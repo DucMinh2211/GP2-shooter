@@ -53,6 +53,12 @@
         "text_encoding": "cpp",
         "cinttypes": "cpp",
         "typeinfo": "cpp",
-        "variant": "cpp"
+        "variant": "cpp",
+        "condition_variable": "cpp",
+        "ratio": "cpp",
+        "semaphore": "cpp",
+        "shared_mutex": "cpp",
+        "sstream": "cpp",
+        "stop_token": "cpp"
     }
 }

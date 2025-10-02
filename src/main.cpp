@@ -17,6 +17,7 @@
 #include "components/inc/AnimatedSprite.h"
 #include "components/inc/Character.h"
 #include "components/inc/BasicAI.h"
+#include "components/inc/OBB.h"
 #include "components/inc/InputHandler.h"
 #include "components/inc/BloodSplash.h"
 #include "components/inc/Smoke.h"
@@ -78,7 +79,10 @@ int main (int argc, char *argv[]) {
 
     // Try to load optional background and title textures
     resourceManager.load_texture("menu_bg", "assets/pictures/menu_bg.png");
-    resourceManager.load_texture("title", "assets/pictures/title.png");
+    // Try PNG first, then JPG if PNG not present
+    if (!resourceManager.load_texture("title", "assets/pictures/title.png")) {
+        resourceManager.load_texture("title", "assets/pictures/title.jpg");
+    }
     SDL_Texture* bg = resourceManager.get_texture("menu_bg");
     SDL_Texture* title_tex = resourceManager.get_texture("title");
 
@@ -159,8 +163,17 @@ int main (int argc, char *argv[]) {
         // create small game world similar to tests/test_char.cpp
         ResourceManager rm(renderer);
 
-        // Load bullet texture (already loaded earlier but ensure available in RM)
-        rm.load_texture("bullet", "assets/pictures/bulletA.png");
+    // Load bullet texture (already loaded earlier but ensure available in RM)
+    rm.load_texture("bullet", "assets/pictures/bulletA.png");
+    // Load battlefield background for the world
+    rm.load_texture("background", "assets/pictures/background.png");
+    // Load buff textures so spawned buff items can use proper sprites
+    rm.load_texture("health-buff", "assets/pictures/health-buff.png");
+    rm.load_texture("bounce-buff", "assets/pictures/bounce-buff.png");
+    rm.load_texture("explode-buff", "assets/pictures/explosion-buff.png");
+    rm.load_texture("piercing-buff", "assets/pictures/piercing-buff.png");
+    // Char speed buff texture
+    rm.load_texture("speed-buff", "assets/pictures/speed-buff.png");
 
         // Create simple team textures (solid colored textures)
         SDL_Surface* red_surface = SDL_CreateRGBSurface(0, 16, 16, 32,
@@ -179,6 +192,9 @@ int main (int argc, char *argv[]) {
         AnimatedSprite idle(renderer, "assets/pictures/PlayerIdle.png", 24, 16, 5, 100);
         AnimatedSprite run(renderer,  "assets/pictures/PlayerRunning.png", 24, 16, 5, 100);
         AnimatedSprite shoot(renderer,"assets/pictures/PlayerShooting.png", 24, 16, 5, 100);
+        AnimatedSprite idle1(renderer, "assets/pictures/tocvangdung.png", 24, 16, 5, 100);
+        AnimatedSprite run1(renderer,  "assets/pictures/tocvangchay.png", 24, 16, 5, 100);
+        AnimatedSprite shoot1(renderer,"assets/pictures/tocvangban.png", 24, 16, 5, 100);
     // Black hole animation (match tests/test_char.cpp)
     AnimatedSprite blackhole_anim(renderer, "assets/pictures/output.png", 200, 200, 12, 100, 3);
 
@@ -189,11 +205,18 @@ int main (int argc, char *argv[]) {
         Character p4(Vector2(WORLD_W - 100.0f, WORLD_H / 2.0f + 50.0f), blue_texture, 200.0f, 100.0f);
 
         p1.set_animations(&idle, &run, &shoot);
-        p2.set_animations(&idle, &run, &shoot);
+        p2.set_animations(&idle1, &run1, &shoot1);
         p3.set_animations(&idle, &run, &shoot);
-        p4.set_animations(&idle, &run, &shoot);
+        p4.set_animations(&idle1, &run1, &shoot1);
 
-        std::vector<Character*> characters = { &p1, &p2, &p3, &p4 };
+    std::vector<Character*> characters = { &p1, &p2, &p3, &p4 };
+
+    // Fixed slot mapping for HUD stability: index 0=p1 (player1_1),1=p2 (player1_2),2=p3 (player2_1),3=p4 (player2_2)
+    std::unordered_map<Character*, int> pvp_slot_index;
+    pvp_slot_index[&p1] = 0;
+    pvp_slot_index[&p2] = 1;
+    pvp_slot_index[&p3] = 2;
+    pvp_slot_index[&p4] = 3;
 
         // Input handlers (assign two characters per input set)
         InputHandler ih1(InputSet::INPUT_1, &p1, &p2);
@@ -228,9 +251,7 @@ int main (int argc, char *argv[]) {
         updatables.push_back(&leftWall);
         updatables.push_back(&rightWall);
 
-        std::vector<Bullet*> bullets;
-        // track bullet spawn time for lifetime enforcement (ms)
-        std::unordered_map<Bullet*, Uint32> bullet_spawn_time;
+    std::vector<Bullet*> bullets;
     std::vector<Explosion*> explosions;
     std::vector<BloodSplash*> bloods;
     std::vector<Smoke*> smokes;
@@ -253,11 +274,58 @@ int main (int argc, char *argv[]) {
         for (int i = 0; i < 7; ++i) {
             int w = wallW(rng);
             int h = wallH(rng);
+            bool placed = false;
+            int attempts = 0;
+            Vector2 chosenPos;
+            // Try to find a position that doesn't intersect boundary walls or existing random walls
+            while (!placed && attempts < 30) {
+                Vector2 pos(wallX(rng), wallY(rng));
+                // create a temporary OBB for the candidate wall
+                OBB tmp_box(pos, Vector2(w / 2.0f, h / 2.0f), 0.0f);
+                bool intersects = false;
+                // check boundary walls
+                for (auto* hb : topWall.get_hitboxes()) if (hb->is_collide(tmp_box)) { intersects = true; break; }
+                if (intersects) { attempts++; continue; }
+                for (auto* hb : bottomWall.get_hitboxes()) if (hb->is_collide(tmp_box)) { intersects = true; break; }
+                if (intersects) { attempts++; continue; }
+                for (auto* hb : leftWall.get_hitboxes()) if (hb->is_collide(tmp_box)) { intersects = true; break; }
+                if (intersects) { attempts++; continue; }
+                for (auto* hb : rightWall.get_hitboxes()) if (hb->is_collide(tmp_box)) { intersects = true; break; }
+                if (intersects) { attempts++; continue; }
+
+                // check existing random walls
+                for (auto* existing : random_walls) if (existing) {
+                    for (auto* hb : existing->get_hitboxes()) {
+                        if (hb->is_collide(tmp_box)) { intersects = true; break; }
+                    }
+                    if (intersects) break;
+                }
+                // avoid spawning walls too close to player spawn positions
+                if (!intersects) {
+                    const float min_player_clearance = 150.0f; // pixels
+                    for (auto* pc : characters) if (pc) {
+                        float dx = pc->get_position().x - pos.x;
+                        float dy = pc->get_position().y - pos.y;
+                        if (dx*dx + dy*dy < min_player_clearance * min_player_clearance) { intersects = true; break; }
+                    }
+                }
+                if (!intersects) {
+                    placed = true;
+                    chosenPos = pos;
+                } else attempts++;
+            }
+
+            if (!placed) {
+                // couldn't find a free spot after attempts; skip creating this wall
+                continue;
+            }
+
+            // Create surface/texture only after a valid position is chosen
             SDL_Surface* surf = SDL_CreateRGBSurface(0, w, h, 32, 0x00FF0000,0x0000FF00,0x000000FF,0xFF000000);
             SDL_FillRect(surf, NULL, SDL_MapRGBA(surf->format, 100, 100, 100, 255));
             SDL_Texture* tex = SDL_CreateTextureFromSurface(renderer, surf);
             SDL_FreeSurface(surf);
-            Wall* rw = new Wall(Vector2(wallX(rng), wallY(rng)), tex);
+            Wall* rw = new Wall(chosenPos, tex);
             random_walls.push_back(rw);
             updatables.push_back(rw);
         }
@@ -267,9 +335,9 @@ int main (int argc, char *argv[]) {
         const Uint32 buff_interval_ms = 10000; // spawn every 10s
         Uint32 last_buff_spawn = SDL_GetTicks();
 
-        // Gun-change timer (notify after 45s and change gun types)
-        const Uint32 gun_change_ms = 45000;
-        bool gun_changed = false;
+    // Gun-change timer: rotate guns every 30s
+    const Uint32 gun_change_ms = 30000; // 30 seconds
+    Uint32 last_gun_change = SDL_GetTicks();
 
     // RNG for blackhole spawn (reuse rng declared above)
     std::uniform_real_distribution<float> distX(100.0f, WORLD_W - 100.0f);
@@ -287,9 +355,14 @@ int main (int argc, char *argv[]) {
     // set renderer logical size so world coordinates map to window
     SDL_RenderSetLogicalSize(renderer, WORLD_W, WORLD_H);
 
-        // game loop
-        bool in_game = true;
+    // game loop
+    bool in_game = true;
+    bool debug_hitboxes = false;
         Uint32 last = SDL_GetTicks();
+        int winning_team = -1; // 1 = red (team 1), 2 = blue (team 2)
+    // simple on-screen notifications
+    struct Notify { std::string text; Uint32 expiry; };
+    std::vector<Notify> notifications;
         while (in_game) {
             SDL_Event e;
             while (SDL_PollEvent(&e)) {
@@ -304,6 +377,7 @@ int main (int argc, char *argv[]) {
                 // Pass events to input handlers which will add bullets to bullets vector
                 ih1.handle_event(e, bullets, rm);
                 ih2.handle_event(e, bullets, rm);
+                if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_b) debug_hitboxes = !debug_hitboxes;
                 if (e.type == SDL_KEYDOWN && e.key.keysym.scancode == SDL_SCANCODE_E) {
                     // spawn an explosion at center for testing and a smoke
                     Vector2 pos(WORLD_W/2.0f - 50.0f, WORLD_H/2.0f - 50.0f);
@@ -320,26 +394,52 @@ int main (int argc, char *argv[]) {
             for (auto* u : updatables) u->update(dt);
             for (auto& bhp : blackholes) if (bhp.first) bhp.first->update(dt);
             for (auto* b : bullets) b->update(dt);
-            // ensure newly created bullets are tracked with spawn time
-            for (auto* b : bullets) {
-                if (bullet_spawn_time.find(b) == bullet_spawn_time.end()) bullet_spawn_time[b] = SDL_GetTicks();
-            }
             for (auto* ex : explosions) ex->update(dt);
+            // Explosion collisions: let characters and bullets react to explosions
+            for (auto* ex : explosions) {
+                for (auto* c : characters) if (c) c->collide(ex);
+                for (auto* bl : bullets) if (bl) ex->collide(bl);
+            }
             for (auto* b : bloods) b->update(dt);
             for (auto* s : smokes) s->update(dt);
 
-            // detect deaths and spawn blood splashes
+            // detect damage and deaths: spawn blood on hit, smoke on death, remove dead immediately
+            std::vector<Character*> just_died;
             for (auto c : characters) {
                 if (!c) continue;
                 float old_h = prev_health[c];
                 float new_h = c->get_health();
-                if (old_h > 0.0f && new_h <= 0.0f) {
-                    // BloodSplash constructor expects (renderer, sheetPath, pos, frameW, frameH, frameCount, frameTime, columns)
+                // took damage (but still alive) -> spawn small blood splash
+                if (new_h < old_h && new_h > 0.0f) {
                     Vector2 bpos = c->get_position();
-                    BloodSplash* bs = new BloodSplash(renderer, std::string("assets/pictures/blood.png"), bpos, 5, 4, 80, 80, 1);
+                    // blood sprite: 24x24 frames, 8 frames, 80ms per frame, 3 columns
+                    BloodSplash* bs = new BloodSplash(renderer, std::string("assets/pictures/blood.png"), bpos, 16, 16, 8, 80, 3);
                     bloods.push_back(bs);
+                    
+                }
+                // just died -> spawn smoke and mark for removal
+                if (old_h > 0.0f && new_h <= 0.0f) {
+                    Vector2 spos = c->get_position();
+                    Smoke* s = new Smoke(renderer, "assets/pictures/khoi.png", spos, 24, 24, 8, 80, 3);
+                    smokes.push_back(s);
+                    
+                    just_died.push_back(c);
+                    // notify input handlers to swap control or clear references
+                    ih1.on_character_death(c);
+                    ih2.on_character_death(c);
                 }
                 prev_health[c] = new_h;
+            }
+            // remove dead characters from active lists so they immediately disappear from HUD/world
+            if (!just_died.empty()) {
+                for (auto d : just_died) {
+                    // remove from characters vector
+                    characters.erase(std::remove(characters.begin(), characters.end(), d), characters.end());
+                    // remove from updatables so they are no longer updated
+                    updatables.erase(std::remove(updatables.begin(), updatables.end(), static_cast<IUpdatable*>(d)), updatables.end());
+                    // remove prev_health entry
+                    prev_health.erase(d);
+                }
             }
 
             // remove finished explosions
@@ -385,35 +485,52 @@ int main (int argc, char *argv[]) {
             blackholes.erase(std::remove_if(blackholes.begin(), blackholes.end(), [](const std::pair<BlackHole*,Uint32>& p){ return p.first == nullptr; }), blackholes.end());
 
             
-            // collisions: bullets vs characters/walls
+            // collisions: bullets vs blackholes/walls/characters (single-sample per bullet)
             for (auto* b : bullets) {
-                for (auto* c : characters) c->collide(b);
-                topWall.collide(b); bottomWall.collide(b); leftWall.collide(b); rightWall.collide(b);
+                if (!b) continue;
+                // use current bullet position (Bullet::update() performs its own internal CCD if needed)
                 for (auto& bhp : blackholes) if (bhp.first) bhp.first->collide(b);
+                if (b->is_destroyed()) continue;
+
+                topWall.collide(b); if (b->is_destroyed()) continue;
+                bottomWall.collide(b); if (b->is_destroyed()) continue;
+                leftWall.collide(b); if (b->is_destroyed()) continue;
+                rightWall.collide(b); if (b->is_destroyed()) continue;
+                for (auto* rw : random_walls) if (rw) { rw->collide(b); if (b->is_destroyed()) continue; }
+                if (b->is_destroyed()) continue;
+
+                for (auto* c : characters) if (c) { c->collide(b); if (b->is_destroyed()) break; }
             }
-            // If any destroyed bullets have exploding buff, spawn explosions at their positions
-            for (auto* bullet : bullets) {
-                if (!bullet) continue;
-                if (bullet->is_destroyed() && bullet->isExploding()) {
-                    // create an explosion at bullet position
-                    Explosion* ex = new Explosion(renderer, "assets/pictures/rielno.png", bullet->get_position(), 50, 50, 9, 40, 3, bullet->get_damage());
-                    explosions.push_back(ex);
-                    // immediate collision check: apply damage to characters in range
-                    for (auto* c : characters) if (c) ex->collide(c);
+
+            // bullet vs bullet collisions: bullets from different teams destroy each other
+            for (size_t i = 0; i < bullets.size(); ++i) {
+                Bullet* a = bullets[i];
+                if (!a || a->is_destroyed()) continue;
+                for (size_t j = i + 1; j < bullets.size(); ++j) {
+                    Bullet* b = bullets[j];
+                    if (!b || b->is_destroyed()) continue;
+                    if (a->get_team_id() == b->get_team_id()) continue;
+                    bool collided = false;
+                    for (auto* ah : a->get_hitboxes()) {
+                        for (auto* bh : b->get_hitboxes()) {
+                            if (ah->is_collide(*bh)) { collided = true; break; }
+                        }
+                        if (collided) break;
+                    }
+                    if (collided) {
+                        a->set_destroyed(true);
+                        b->set_destroyed(true);
+                    }
                 }
             }
 
-            // remove destroyed bullets or bullets older than 8 seconds
-            Uint32 now_bul = SDL_GetTicks();
+            // remove destroyed bullets (explode if necessary) - follow tests/test_char.cpp
             bullets.erase(std::remove_if(bullets.begin(), bullets.end(), [&](Bullet* bullet){
-                bool remove = false;
-                if (bullet->is_destroyed()) remove = true;
-                auto it = bullet_spawn_time.find(bullet);
-                if (it != bullet_spawn_time.end()) {
-                    if (now_bul - it->second >= 8000) remove = true;
-                }
-                if (remove) {
-                    if (it != bullet_spawn_time.end()) bullet_spawn_time.erase(it);
+                if (!bullet) return true;
+                if (bullet->is_destroyed()) {
+                    if (bullet->getBuff() == BulletBuffType::EXPLODING) {
+                        bullet->explode(explosions, renderer);
+                    }
                     delete bullet;
                     return true;
                 }
@@ -435,45 +552,164 @@ int main (int argc, char *argv[]) {
 
             // Buff spawn logic every 10s
             if (SDL_GetTicks() - last_buff_spawn >= buff_interval_ms) {
-                // choose a buff at random (health or bullet buff)
+                // Choose a buff at random among all CharBuffType and BulletBuffType values.
                 std::variant<CharBuffType, BulletBuffType> bt;
-                if ((rng() % 2) == 0) bt = CharBuffType::HEALTH;
-                else bt = BulletBuffType::BOUNCING;
-                Vector2 pos(wallX(rng), wallY(rng));
-                SDL_Surface* bs = SDL_CreateRGBSurface(0, 32, 32, 32, 0x00FF0000,0x0000FF00,0x000000FF,0xFF000000);
-                SDL_FillRect(bs, NULL, SDL_MapRGBA(bs->format, 200, 100, 0, 255));
-                SDL_Texture* btex = SDL_CreateTextureFromSurface(renderer, bs);
-                SDL_FreeSurface(bs);
-                BuffItem* bi = new BuffItem(pos, btex, bt);
-                buffs.push_back(bi);
-                updatables.push_back(bi);
+                // Only spawn a bullet buff if no character currently has a bullet buff active
+                bool any_bullet_buff = false;
+                for (auto* c : characters) if (c) {
+                    if (c->get_gun_buff_type() != BulletBuffType::NONE) { any_bullet_buff = true; break; }
+                }
+
+                // Enumerate CharBuffType and BulletBuffType ranges
+                const int num_char_buffs = (int)CharBuffType::NUM; // e.g., HEALTH, SPEED
+                // For BulletBuffType, we don't have a NUM enumerator; infer by listing known values
+                // Define an ordered array of available bullet buffs
+                std::vector<BulletBuffType> bulletTypes = { BulletBuffType::BOUNCING, BulletBuffType::EXPLODING, BulletBuffType::PIERCING };
+
+                // Decide whether to spawn a char buff or bullet buff with equal probability
+                std::uniform_int_distribution<int> chooseType(0, 1);
+                int kind = chooseType(rng);
+                if (kind == 0) {
+                    // Char buff: pick uniformly from CharBuffType values
+                    std::uniform_int_distribution<int> chooseChar(0, num_char_buffs - 1);
+                    int idx = chooseChar(rng);
+                    bt = static_cast<CharBuffType>(idx);
+                } else {
+                    // Bullet buff: only if none currently active
+                    if (any_bullet_buff) {
+                        // fallback to a random char buff
+                        std::uniform_int_distribution<int> chooseChar(0, num_char_buffs - 1);
+                        int idx = chooseChar(rng);
+                        bt = static_cast<CharBuffType>(idx);
+                    } else {
+                        std::uniform_int_distribution<int> chooseBullet(0, (int)bulletTypes.size() - 1);
+                        int idx = chooseBullet(rng);
+                        bt = bulletTypes[idx];
+                    }
+                }
+                // pick a spawn position that does not intersect any wall hitbox
+                Vector2 pos;
+                bool placed = false;
+                for (int attempt = 0; attempt < 30 && !placed; ++attempt) {
+                    pos = Vector2(wallX(rng), wallY(rng));
+                    // create a temporary OBB for the buff area (32x32)
+                    OBB tmp_box(pos, Vector2(16.0f, 16.0f), 0.0f);
+                    bool intersects = false;
+                    // check boundary walls
+                    for (auto* hb : topWall.get_hitboxes()) if (hb->is_collide(tmp_box)) { intersects = true; break; }
+                    if (intersects) continue;
+                    for (auto* hb : bottomWall.get_hitboxes()) if (hb->is_collide(tmp_box)) { intersects = true; break; }
+                    if (intersects) continue;
+                    for (auto* hb : leftWall.get_hitboxes()) if (hb->is_collide(tmp_box)) { intersects = true; break; }
+                    if (intersects) continue;
+                    for (auto* hb : rightWall.get_hitboxes()) if (hb->is_collide(tmp_box)) { intersects = true; break; }
+                    if (intersects) continue;
+                    // check random internal walls
+                    for (auto* rw : random_walls) if (rw) {
+                        for (auto* hb : rw->get_hitboxes()) {
+                            if (hb->is_collide(tmp_box)) { intersects = true; break; }
+                        }
+                        if (intersects) break;
+                    }
+                    if (!intersects) placed = true;
+                }
+                if (placed) {
+                    // select texture based on buff type (use ResourceManager textures when available)
+                    SDL_Texture* chosen_tex = nullptr;
+                    if (std::holds_alternative<CharBuffType>(bt)) {
+                        CharBuffType cb = std::get<CharBuffType>(bt);
+                        switch (cb) {
+                            case CharBuffType::HEALTH: chosen_tex = rm.get_texture("health-buff"); break;
+                            case CharBuffType::SPEED: chosen_tex = rm.get_texture("speed-buff"); break;
+                            default: chosen_tex = rm.get_texture("health-buff"); break;
+                        }
+                    } else if (std::holds_alternative<BulletBuffType>(bt)) {
+                        BulletBuffType bb = std::get<BulletBuffType>(bt);
+                        switch (bb) {
+                            case BulletBuffType::BOUNCING: chosen_tex = rm.get_texture("bounce-buff"); break;
+                            case BulletBuffType::EXPLODING: chosen_tex = rm.get_texture("explode-buff"); break;
+                            case BulletBuffType::PIERCING: chosen_tex = rm.get_texture("piercing-buff"); break;
+                            default: chosen_tex = nullptr; break;
+                        }
+                    }
+
+                    SDL_Texture* btex = chosen_tex;
+                    // fallback: create a temporary orange texture if resource missing
+                    if (!btex) {
+                        SDL_Surface* bs = SDL_CreateRGBSurface(0, 32, 32, 32, 0x00FF0000,0x0000FF00,0x000000FF,0xFF000000);
+                        SDL_FillRect(bs, NULL, SDL_MapRGBA(bs->format, 200, 100, 0, 255));
+                        btex = SDL_CreateTextureFromSurface(renderer, bs);
+                        SDL_FreeSurface(bs);
+                    }
+
+                    BuffItem* bi = new BuffItem(pos, btex, bt);
+                    buffs.push_back(bi);
+                    updatables.push_back(bi);
+                }
                 last_buff_spawn = SDL_GetTicks();
             }
 
-            // Gun change after 45s
-            if (!gun_changed && SDL_GetTicks() - start_time >= gun_change_ms) {
-                gun_changed = true;
+            // Let characters check for buff collisions and remove consumed buffs (same logic as tests/test_char.cpp)
+            for (auto* c : characters) {
+                if (!c) continue;
+                for (auto* bi : buffs) if (bi) c->collide(bi);
+            }
+            {
+                auto it = buffs.begin();
+                while (it != buffs.end()) {
+                    BuffItem* bi = *it;
+                    if (bi->is_consumed()) {
+                        // If the consumed buff was a BulletBuff, clear bullet buffs from other characters
+                        auto btype = bi->get_buff_type();
+                        if (std::holds_alternative<BulletBuffType>(btype)) {
+                            BulletBuffType taken = std::get<BulletBuffType>(btype);
+                            // assign to the first character who overlaps (character::collide already set their buff),
+                            // but ensure others have no bullet buff
+                            for (auto* c : characters) if (c) {
+                                if (c->get_gun_buff_type() != BulletBuffType::NONE && c->get_gun_buff_type() != taken) {
+                                    c->clear_bullet_buff();
+                                }
+                            }
+                        }
+                        updatables.erase(std::remove(updatables.begin(), updatables.end(), static_cast<IUpdatable*>(bi)), updatables.end());
+                        delete bi;
+                        it = buffs.erase(it);
+                    } else {
+                        ++it;
+                    }
+                }
+            }
+
+            // Rotate guns every gun_change_ms (Pistol <-> AK)
+            if (SDL_GetTicks() - last_gun_change >= gun_change_ms) {
+                last_gun_change = SDL_GetTicks();
+                // toggle and collect a message indicating new global gun
                 for (auto* c : characters) {
                     if (!c) continue;
                     GunType cur = c->get_gun_type();
                     GunType next = GunType::PISTOL;
                     if (cur == GunType::PISTOL) next = GunType::AK;
-                    else if (cur == GunType::AK) next = GunType::SHOTGUN;
                     else next = GunType::PISTOL;
                     c->set_gun_type(next);
                 }
+                // push a global notification for 2.5s
+                std::string msg = "Guns switched!";
+                notifications.push_back({ msg, SDL_GetTicks() + 2500 });
             }
 
-            // Team win detection: players 0-1 red, 2-3 blue
+            // Team win detection: check team membership via each character's input set (team id)
             bool red_alive = false, blue_alive = false;
-            for (int i = 0; i < (int)characters.size(); ++i) {
-                Character* ch = characters[i];
+            for (auto* ch : characters) {
                 if (!ch) continue;
-                if (i < 2) { if (ch->get_health() > 0.0f) red_alive = true; }
-                else { if (ch->get_health() > 0.0f) blue_alive = true; }
+                if (ch->get_input_set() == 0) { if (ch->get_health() > 0.0f) red_alive = true; }
+                else if (ch->get_input_set() == 1) { if (ch->get_health() > 0.0f) blue_alive = true; }
             }
             if (!red_alive || !blue_alive) {
-                // game ends; display winning team briefly (handled below)
+                // determine winner: team 1 = input_set 0 (red), team 2 = input_set 1 (blue)
+                if (red_alive && !blue_alive) winning_team = 1;
+                else if (blue_alive && !red_alive) winning_team = 2;
+                else winning_team = -1; // tie or all dead
+                // exit main loop; we'll display the victory banner after the loop
                 in_game = false;
             }
 
@@ -481,6 +717,12 @@ int main (int argc, char *argv[]) {
             SDL_SetRenderDrawColor(renderer, 0,0,0,255);
             SDL_RenderClear(renderer);
 
+            // draw battlefield background (if available)
+            SDL_Texture* bgtex = rm.get_texture("background");
+            if (bgtex) {
+                SDL_Rect dst = { 0, 0, WORLD_W, WORLD_H };
+                SDL_RenderCopy(renderer, bgtex, NULL, &dst);
+            }
             // draw world boundary (visible)
             SDL_SetRenderDrawColor(renderer, 0xFF, 0x00, 0x00, 0xFF);
             SDL_Rect worldRect = { 0, 0, WORLD_W, WORLD_H };
@@ -503,43 +745,308 @@ int main (int argc, char *argv[]) {
                 b->render(renderer);
             }
 
+            // debug: draw hitboxes
+            if (debug_hitboxes) {
+                // bullet hitboxes
+                for (auto* bullet : bullets) {
+                    for (auto* hb : bullet->get_hitboxes()) hb->debug_draw(renderer, {255, 0, 0, 255});
+                }
+                // wall hitboxes
+                for (auto* rw : random_walls) if (rw) for (auto* hb : rw->get_hitboxes()) hb->debug_draw(renderer, {0,255,0,255});
+                for (auto* hb : topWall.get_hitboxes()) hb->debug_draw(renderer, {0,255,0,255});
+                for (auto* hb : bottomWall.get_hitboxes()) hb->debug_draw(renderer, {0,255,0,255});
+                for (auto* hb : leftWall.get_hitboxes()) hb->debug_draw(renderer, {0,255,0,255});
+                for (auto* hb : rightWall.get_hitboxes()) hb->debug_draw(renderer, {0,255,0,255});
+            }
+
             for (auto* ex : explosions) { ex->render(renderer); }
             for (auto* b : bloods) b->render(renderer);
             for (auto* s : smokes) s->render(renderer);
             for (auto* bi : buffs) if (bi) bi->render(renderer);
             for (auto& bhp : blackholes) if (bhp.first) bhp.first->render(renderer);
 
-            // UI overlay: show health and gun type for each player (top-left)
+            // UI overlay: split HUD into top-left and top-right panels
             if (font) {
-                int y = 10;
-                for (int i = 0; i < (int)characters.size(); ++i) {
-                    Character* ch = characters[i];
+                SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+                // render notifications (centered on screen)
+                // compute how many valid notifications we have so we can vertically center the stack
+                int validCount = 0;
+                for (auto &n : notifications) if ((int)n.text.size() != 0 && SDL_GetTicks() <= n.expiry) ++validCount;
+                int lineH = 20;
+                int notifY = WORLD_H/2 - (validCount * lineH) / 2;
+                for (auto it = notifications.begin(); it != notifications.end();) {
+                    if ((int)it->text.size() == 0 || SDL_GetTicks() > it->expiry) { it = notifications.erase(it); continue; }
+                    SDL_Color textColor = { 255, 220, 120, 255 };
+                    SDL_Surface* t = TTF_RenderText_Blended(font, it->text.c_str(), textColor);
+                    if (t) {
+                        SDL_Texture* tt = SDL_CreateTextureFromSurface(renderer, t);
+                        int tw = t->w, th = t->h;
+                        SDL_Rect td = { WORLD_W/2 - tw/2, notifY, tw, th };
+                        SDL_FreeSurface(t);
+                        if (tt) { SDL_RenderCopy(renderer, tt, NULL, &td); SDL_DestroyTexture(tt); }
+                    }
+                    notifY += lineH;
+                    ++it;
+                }
+                // Fixed two slots per team HUD to avoid shifting when players die
+                const int panelW = 270; // smaller panel width
+                const int entryH = 56;  // reduced entry height
+                const int panelY = 8;
+                const int left_count = 2;
+                const int right_count = 2;
+                // left panel background (team 1)
+                int panelHLeft = 16 + left_count * entryH;
+                int panelLeftX = 8;
+                SDL_Rect panelLeftBg = { panelLeftX - 6, panelY - 6, panelW, panelHLeft };
+                SDL_SetRenderDrawColor(renderer, 0, 0, 0, 160);
+                SDL_RenderFillRect(renderer, &panelLeftBg);
+                // right panel background (team 2)
+                int panelHRight = 16 + right_count * entryH;
+                int panelRightX = WORLD_W - panelW - 8;
+                SDL_Rect panelRightBg = { panelRightX - 6, panelY - 6, panelW, panelHRight };
+                SDL_SetRenderDrawColor(renderer, 0, 0, 0, 160);
+                SDL_RenderFillRect(renderer, &panelRightBg);
+
+                // Build per-team fixed slot lists (2 slots each) using the initial spawn mapping
+                Character* team0_slots[2] = { nullptr, nullptr };
+                Character* team1_slots[2] = { nullptr, nullptr };
+                for (auto* ch : characters) {
                     if (!ch) continue;
-                    std::string label = "P" + std::to_string(i+1) + " H:" + std::to_string((int)ch->get_health());
-                    // gun type
-                    GunType gt = ch->get_gun_type();
-                    if (gt == GunType::AK) label += " AK";
-                    else if (gt == GunType::SHOTGUN) label += " SHG";
-                    else label += " PIS";
-                    SDL_Color textColor = {255,255,255,255};
-                    SDL_Surface* textSurf = TTF_RenderText_Blended(font, label.c_str(), textColor);
-                    if (textSurf) {
-                        SDL_Texture* textTex = SDL_CreateTextureFromSurface(renderer, textSurf);
-                        int tw = textSurf->w, th = textSurf->h;
-                        SDL_FreeSurface(textSurf);
-                        if (textTex) {
-                            SDL_Rect tdst = { 10, y, tw, th };
-                            SDL_RenderCopy(renderer, textTex, NULL, &tdst);
-                            SDL_DestroyTexture(textTex);
+                    auto it = pvp_slot_index.find(ch);
+                    if (it != pvp_slot_index.end()) {
+                        int idx = it->second;
+                        if (idx == 0) team0_slots[0] = ch;
+                        else if (idx == 1) team0_slots[1] = ch;
+                        else if (idx == 2) team1_slots[0] = ch;
+                        else if (idx == 3) team1_slots[1] = ch;
+                    } else {
+                        // Fallback: fill empty slots by team
+                        if (ch->get_input_set() == 0) {
+                            if (!team0_slots[0]) team0_slots[0] = ch;
+                            else if (!team0_slots[1]) team0_slots[1] = ch;
+                        } else {
+                            if (!team1_slots[0]) team1_slots[0] = ch;
+                            else if (!team1_slots[1]) team1_slots[1] = ch;
                         }
                     }
-                    y += 18;
+                }
+
+                // Debug: print slot mapping and health when debug_hitboxes is enabled
+                if (debug_hitboxes) {
+                    for (int si = 0; si < 2; ++si) {
+                        Character* c0 = team0_slots[si];
+                        if (c0) SDL_Log("PVP HUD slot L%d -> ptr=%p health=%.1f input_set=%d", si, (void*)c0, c0->get_health(), c0->get_input_set());
+                        else SDL_Log("PVP HUD slot L%d -> EMPTY", si);
+                    }
+                    for (int si = 0; si < 2; ++si) {
+                        Character* c1 = team1_slots[si];
+                        if (c1) SDL_Log("PVP HUD slot R%d -> ptr=%p health=%.1f input_set=%d", si, (void*)c1, c1->get_health(), c1->get_input_set());
+                        else SDL_Log("PVP HUD slot R%d -> EMPTY", si);
+                    }
+                }
+
+                // helper: ellipsize to pixel width
+                auto ellipsize = [&](const std::string &full, int maxW) {
+                    std::string s = full;
+                    int w = 0, h = 0;
+                    if (TTF_SizeText(font, s.c_str(), &w, &h) == 0 && w <= maxW) return s;
+                    while (!s.empty()) {
+                        s = s.substr(0, s.size() - 1);
+                        std::string t = s + "...";
+                        if (TTF_SizeText(font, t.c_str(), &w, &h) == 0 && w <= maxW) return t;
+                    }
+                    return std::string("...");
+                };
+
+                // left column entries (team 0) - fixed 2 slots
+                for (int idx = 0; idx < 2; ++idx) {
+                    Character* ch = team0_slots[idx];
+                    int x = panelLeftX;
+                    int y = panelY + idx * entryH;
+
+                    SDL_Rect entryBg = { x + 8, y + 8, panelW - 16, entryH - 16 };
+                    SDL_SetRenderDrawColor(renderer, 24, 24, 24, 200);
+                    SDL_RenderFillRect(renderer, &entryBg);
+
+                    SDL_Rect sw = { x + 12, y + 12, 18, 18 };
+                    SDL_SetRenderDrawColor(renderer, 200, 60, 60, 255);
+                    SDL_RenderFillRect(renderer, &sw);
+
+                    std::string basename = (idx==0?"player1_1":"player1_2");
+                    std::string fullName = basename + (ch ? (ch->get_gun_type() == GunType::AK ? " AK" : " PIS") : " (dead)");
+                    int maxTextW = panelW - 28 - 48;
+                    std::string nameToRender = ellipsize(fullName, maxTextW);
+                    SDL_Color textColor = { 230, 230, 230, 255 };
+                    int textH = 0;
+                    if (ch) {
+                        SDL_Surface* textSurf = TTF_RenderText_Blended(font, nameToRender.c_str(), textColor);
+                        if (textSurf) {
+                            textH = textSurf->h;
+                            SDL_Texture* textTex = SDL_CreateTextureFromSurface(renderer, textSurf);
+                            SDL_Rect dst = { x + 28, y + 10, textSurf->w, textH };
+                            SDL_FreeSurface(textSurf);
+                            if (textTex) { SDL_RenderCopy(renderer, textTex, NULL, &dst); SDL_DestroyTexture(textTex); }
+                        }
+                    } else {
+                        // render dimmed placeholder name
+                        SDL_Surface* textSurf = TTF_RenderText_Blended(font, nameToRender.c_str(), SDL_Color{160,160,160,255});
+                        if (textSurf) {
+                            textH = textSurf->h;
+                            SDL_Texture* textTex = SDL_CreateTextureFromSurface(renderer, textSurf);
+                            SDL_Rect dst = { x + 28, y + 10, textSurf->w, textH };
+                            SDL_FreeSurface(textSurf);
+                            if (textTex) { SDL_RenderCopy(renderer, textTex, NULL, &dst); SDL_DestroyTexture(textTex); }
+                        }
+                    }
+
+                    float hp = ch ? std::max(0.0f, ch->get_health()) : 0.0f;
+                    float hpfrac = std::min(1.0f, hp / 100.0f);
+                    int hbW = 150;
+                    int hbH = 12;
+                    int hbY = y + 12 + textH + 8;
+                    SDL_Rect hbBg = { x + 36, hbY, hbW, hbH };
+                    SDL_SetRenderDrawColor(renderer, 60, 60, 60, 200); SDL_RenderFillRect(renderer, &hbBg);
+                    SDL_Rect hbFg = { x + 36, hbY, (int)(hbW * hpfrac), hbH };
+                    SDL_SetRenderDrawColor(renderer, (Uint8)(200 * (1.0f - hpfrac)), (Uint8)(200 * hpfrac), 50, 255); SDL_RenderFillRect(renderer, &hbFg);
+
+                    int ix = x + panelW - 28;
+                    int iconY = y + 10;
+                    if (ch) {
+                        auto cbs = ch->get_active_char_buffs();
+                        for (auto cb : cbs) {
+                            SDL_Texture* cbtex = nullptr;
+                            switch (cb) {
+                                case CharBuffType::HEALTH: cbtex = rm.get_texture("health-buff"); break;
+                                case CharBuffType::SPEED: cbtex = rm.get_texture("speed-buff"); break;
+                                default: break;
+                            }
+                            if (cbtex) { SDL_Rect cbdst = { ix - 20 + 1, iconY, 20, 20 }; SDL_RenderCopy(renderer, cbtex, NULL, &cbdst); ix -= 20 + 6; }
+                        }
+                        BulletBuffType bb = ch->get_active_bullet_buff();
+                        SDL_Texture* btex = nullptr;
+                        switch (bb) {
+                            case BulletBuffType::BOUNCING: btex = rm.get_texture("bounce-buff"); break;
+                            case BulletBuffType::EXPLODING: btex = rm.get_texture("explode-buff"); break;
+                            case BulletBuffType::PIERCING: btex = rm.get_texture("piercing-buff"); break;
+                            default: break;
+                        }
+                        if (btex) { SDL_Rect bdst = { ix - 20 + 1, iconY, 20, 20 }; SDL_RenderCopy(renderer, btex, NULL, &bdst); ix -= 20 + 6; }
+                    }
+                }
+
+                // right column entries (team 1) - fixed 2 slots
+                for (int ridx = 0; ridx < 2; ++ridx) {
+                    Character* ch = team1_slots[ridx];
+                    int x = panelRightX;
+                    int y = panelY + ridx * entryH;
+
+                    SDL_Rect entryBg = { x + 8, y + 8, panelW - 16, entryH - 16 };
+                    SDL_SetRenderDrawColor(renderer, 24, 24, 24, 200);
+                    SDL_RenderFillRect(renderer, &entryBg);
+
+                    SDL_Rect sw = { x + 12, y + 12, 18, 18 };
+                    SDL_SetRenderDrawColor(renderer, 80, 120, 220, 255);
+                    SDL_RenderFillRect(renderer, &sw);
+
+                    std::string basename = (ridx==0?"player2_1":"player2_2");
+                    std::string fullName = basename + (ch ? (ch->get_gun_type() == GunType::AK ? " AK" : " PIS") : " (dead)");
+                    int maxTextW = panelW - 28 - 48;
+                    std::string nameToRender = ellipsize(fullName, maxTextW);
+                    SDL_Color textColor = { 230, 230, 230, 255 };
+                    int textH = 0;
+                    if (ch) {
+                        SDL_Surface* textSurf = TTF_RenderText_Blended(font, nameToRender.c_str(), textColor);
+                        if (textSurf) {
+                            textH = textSurf->h;
+                            SDL_Texture* textTex = SDL_CreateTextureFromSurface(renderer, textSurf);
+                            SDL_Rect dst = { x + 28, y + 10, textSurf->w, textH };
+                            SDL_FreeSurface(textSurf);
+                            if (textTex) { SDL_RenderCopy(renderer, textTex, NULL, &dst); SDL_DestroyTexture(textTex); }
+                        }
+                    } else {
+                        SDL_Surface* textSurf = TTF_RenderText_Blended(font, nameToRender.c_str(), SDL_Color{160,160,160,255});
+                        if (textSurf) {
+                            textH = textSurf->h;
+                            SDL_Texture* textTex = SDL_CreateTextureFromSurface(renderer, textSurf);
+                            SDL_Rect dst = { x + 28, y + 10, textSurf->w, textH };
+                            SDL_FreeSurface(textSurf);
+                            if (textTex) { SDL_RenderCopy(renderer, textTex, NULL, &dst); SDL_DestroyTexture(textTex); }
+                        }
+                    }
+
+                    float hp = ch ? std::max(0.0f, ch->get_health()) : 0.0f;
+                    float hpfrac = std::min(1.0f, hp / 100.0f);
+                    int hbW = 150;
+                    int hbH = 12;
+                    int hbY = y + 12 + textH + 8;
+                    SDL_Rect hbBg = { x + 36, hbY, hbW, hbH };
+                    SDL_SetRenderDrawColor(renderer, 60, 60, 60, 200); SDL_RenderFillRect(renderer, &hbBg);
+                    SDL_Rect hbFg = { x + 36, hbY, (int)(hbW * hpfrac), hbH };
+                    SDL_SetRenderDrawColor(renderer, (Uint8)(200 * (1.0f - hpfrac)), (Uint8)(200 * hpfrac), 50, 255); SDL_RenderFillRect(renderer, &hbFg);
+
+                    int ix = x + panelW - 28;
+                    int iconY = y + 10;
+                    if (ch) {
+                        auto cbs2 = ch->get_active_char_buffs();
+                        for (auto cb : cbs2) {
+                            SDL_Texture* cbtex = nullptr;
+                            switch (cb) {
+                                case CharBuffType::HEALTH: cbtex = rm.get_texture("health-buff"); break;
+                                case CharBuffType::SPEED: cbtex = rm.get_texture("speed-buff"); break;
+                                default: break;
+                            }
+                            if (cbtex) { SDL_Rect cbdst = { ix - 20 + 1, iconY, 20, 20 }; SDL_RenderCopy(renderer, cbtex, NULL, &cbdst); ix -= 20 + 6; }
+                        }
+                        BulletBuffType bb2 = ch->get_active_bullet_buff();
+                        SDL_Texture* btex2 = nullptr;
+                        switch (bb2) {
+                            case BulletBuffType::BOUNCING: btex2 = rm.get_texture("bounce-buff"); break;
+                            case BulletBuffType::EXPLODING: btex2 = rm.get_texture("explode-buff"); break;
+                            case BulletBuffType::PIERCING: btex2 = rm.get_texture("piercing-buff"); break;
+                            default: break;
+                        }
+                        if (btex2) { SDL_Rect bdst = { ix - 20 + 1, iconY, 20, 20 }; SDL_RenderCopy(renderer, btex2, NULL, &bdst); ix -= 20 + 6; }
+                    }
                 }
             }
 
             SDL_RenderPresent(renderer);
             SDL_Delay(16);
         }
+
+    // If a winning team was determined, show a highlighted victory banner for 3 seconds
+    if (winning_team == 1 || winning_team == 2) {
+        Uint32 show_until = SDL_GetTicks() + 3000;
+        while (SDL_GetTicks() < show_until) {
+            SDL_Event e;
+            while (SDL_PollEvent(&e)) {
+                if (e.type == SDL_QUIT) { show_until = 0; break; }
+            }
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 220);
+            SDL_RenderClear(renderer);
+            // semi-transparent highlight box
+            std::string winText = "Team " + std::to_string(winning_team) + " wins!";
+            SDL_Color hl = { 255, 200, 60, 255 };
+            SDL_Color textColor = { 30, 30, 30, 255 };
+            SDL_Surface* surf = TTF_RenderText_Blended(font ? font : nullptr, winText.c_str(), textColor);
+            if (surf) {
+                SDL_Texture* tex = SDL_CreateTextureFromSurface(renderer, surf);
+                int tw = surf->w, th = surf->h;
+                SDL_FreeSurface(surf);
+                // draw highlighted box behind text
+                SDL_Rect box = { WORLD_W/2 - (tw+40)/2, WORLD_H/2 - (th+30)/2, tw+40, th+30 };
+                SDL_SetRenderDrawColor(renderer, hl.r, hl.g, hl.b, hl.a);
+                SDL_RenderFillRect(renderer, &box);
+                if (tex) {
+                    SDL_Rect dst = { box.x + 20, box.y + 12, tw, th };
+                    SDL_RenderCopy(renderer, tex, NULL, &dst);
+                    SDL_DestroyTexture(tex);
+                }
+            }
+            SDL_RenderPresent(renderer);
+            SDL_Delay(16);
+        }
+    }
 
     // restore renderer logical size back to window for menu
     SDL_RenderSetLogicalSize(renderer, WINDOW_W, WINDOW_H);
@@ -570,6 +1077,8 @@ int main (int argc, char *argv[]) {
     auto run_pve_game = [&](void) {
         ResourceManager rm(renderer);
         rm.load_texture("bullet", "assets/pictures/bulletA.png");
+        // battlefield background
+        rm.load_texture("background", "assets/pictures/background.png");
 
         // Player
         SDL_Surface* green_surface = SDL_CreateRGBSurface(0, 16, 16, 32,
@@ -625,6 +1134,10 @@ int main (int argc, char *argv[]) {
     updatables.push_back(&ai1);
     updatables.push_back(&ai2);
 
+        // Gun-change timer for PVE: rotate guns every 30s
+        const Uint32 gun_change_ms = 30000;
+        Uint32 last_gun_change = SDL_GetTicks();
+
         // Walls (reuse same wall creation as PVP for bounds)
         const int wall_thickness = 32;
         SDL_Surface* wall_surf_h = SDL_CreateRGBSurface(0, WORLD_W, wall_thickness, 32, 0x00FF0000,0x0000FF00,0x000000FF,0xFF000000);
@@ -640,10 +1153,12 @@ int main (int argc, char *argv[]) {
         Wall leftWall(Vector2(wall_thickness / 2.0f, WORLD_H/2.0f), wall_tex_v);
         Wall rightWall(Vector2(WORLD_W - wall_thickness / 2.0f, WORLD_H/2.0f), wall_tex_v);
 
-        // game loop simple
-        SDL_RenderSetLogicalSize(renderer, WORLD_W, WORLD_H);
-        bool in_game = true;
-        Uint32 last = SDL_GetTicks();
+    // game loop simple
+    SDL_RenderSetLogicalSize(renderer, WORLD_W, WORLD_H);
+    bool in_game = true;
+    Uint32 last = SDL_GetTicks();
+    struct Notify { std::string text; Uint32 expiry; };
+    std::vector<Notify> notifications;
         while (in_game) {
             SDL_Event e;
             while (SDL_PollEvent(&e)) {
@@ -664,20 +1179,61 @@ int main (int argc, char *argv[]) {
             for (auto* u : updatables) u->update(dt);
             for (auto* b : bullets) b->update(dt);
             for (auto* ex : explosions) ex->update(dt);
+            // Explosion collisions in PVE: characters/bullets
+            for (auto* ex : explosions) {
+                for (auto c : characters) if (c) c->collide(ex);
+                for (auto* bl : bullets) if (bl) ex->collide(bl);
+            }
             for (auto* b : bloods) b->update(dt);
             for (auto* s : smokes) s->update(dt);
 
-            // detect deaths and spawn blood splashes
+            // Rotate guns every gun_change_ms in PVE
+            if (SDL_GetTicks() - last_gun_change >= gun_change_ms) {
+                last_gun_change = SDL_GetTicks();
+                // rotate player
+                GunType cur = player.get_gun_type();
+                GunType next = GunType::PISTOL;
+                if (cur == GunType::PISTOL) next = GunType::AK;
+                else next = GunType::PISTOL;
+                player.set_gun_type(next);
+                // rotate enemies
+                for (auto* en : enemies) if (en) {
+                    GunType ecur = en->get_gun_type();
+                    GunType enext = GunType::PISTOL;
+                    if (ecur == GunType::PISTOL) enext = GunType::AK;
+                    else enext = GunType::PISTOL;
+                    en->set_gun_type(enext);
+                }
+                notifications.push_back({ std::string("Guns switched!"), SDL_GetTicks() + 2500 });
+            }
+
+            // detect damage and deaths in PVE: spawn blood on hit, smoke on death, remove dead
+            std::vector<Character*> pve_just_died;
             for (auto c : characters) {
                 if (!c) continue;
                 float old_h = prev_health[c];
                 float new_h = c->get_health();
-                if (old_h > 0.0f && new_h <= 0.0f) {
+                if (new_h < old_h && new_h > 0.0f) {
                     Vector2 bpos = c->get_position();
-                    BloodSplash* bs = new BloodSplash(renderer, std::string("assets/pictures/blood.png"), bpos, 5, 4, 80, 80, 1);
+                    BloodSplash* bs = new BloodSplash(renderer, std::string("assets/pictures/blood.png"), bpos, 24, 24, 8, 80, 3);
                     bloods.push_back(bs);
                 }
+                if (old_h > 0.0f && new_h <= 0.0f) {
+                    Vector2 spos = c->get_position();
+                    Smoke* s = new Smoke(renderer, "assets/pictures/khoi.png", spos, 24, 24, 8, 80, 3);
+                    smokes.push_back(s);
+                    SDL_Log("PVE Spawned Smoke at %.1f, %.1f", spos.x, spos.y);
+                    pve_just_died.push_back(c);
+                    ih_player.on_character_death(c);
+                }
                 prev_health[c] = new_h;
+            }
+            if (!pve_just_died.empty()) {
+                for (auto d : pve_just_died) {
+                    characters.erase(std::remove(characters.begin(), characters.end(), d), characters.end());
+                    updatables.erase(std::remove(updatables.begin(), updatables.end(), static_cast<IUpdatable*>(d)), updatables.end());
+                    prev_health.erase(d);
+                }
             }
 
             // cleanup finished explosions
@@ -692,6 +1248,27 @@ int main (int argc, char *argv[]) {
                 player.collide(b);
                 topWall.collide(b); bottomWall.collide(b); leftWall.collide(b); rightWall.collide(b);
                 for (auto* en : enemies) en->collide(b);
+            }
+            // bullet vs bullet collisions in PVE: bullets from different teams (if any) destroy each other
+            for (size_t i = 0; i < bullets.size(); ++i) {
+                Bullet* a = bullets[i];
+                if (!a || a->is_destroyed()) continue;
+                for (size_t j = i + 1; j < bullets.size(); ++j) {
+                    Bullet* b = bullets[j];
+                    if (!b || b->is_destroyed()) continue;
+                    if (a->get_team_id() == b->get_team_id()) continue;
+                    bool collided = false;
+                    for (auto* ah : a->get_hitboxes()) {
+                        for (auto* bh : b->get_hitboxes()) {
+                            if (ah->is_collide(*bh)) { collided = true; break; }
+                        }
+                        if (collided) break;
+                    }
+                    if (collided) {
+                        a->set_destroyed(true);
+                        b->set_destroyed(true);
+                    }
+                }
             }
             // remove destroyed bullets
             bullets.erase(std::remove_if(bullets.begin(), bullets.end(), [](Bullet* bullet){ if (bullet->is_destroyed()) { delete bullet; return true; } return false; }), bullets.end());
@@ -711,6 +1288,12 @@ int main (int argc, char *argv[]) {
             // render
             SDL_SetRenderDrawColor(renderer, 0,0,0,255);
             SDL_RenderClear(renderer);
+            // draw battlefield background (if available)
+            SDL_Texture* bgtex = rm.get_texture("background");
+            if (bgtex) {
+                SDL_Rect dst = { 0, 0, WORLD_W, WORLD_H };
+                SDL_RenderCopy(renderer, bgtex, NULL, &dst);
+            }
             SDL_Rect worldRect = {0,0,WORLD_W,WORLD_H};
             SDL_SetRenderDrawColor(renderer, 0xFF, 0x00, 0x00, 0xFF);
             SDL_RenderDrawRect(renderer, &worldRect);
@@ -720,6 +1303,69 @@ int main (int argc, char *argv[]) {
             for (auto* b : bullets) b->render(renderer);
             for (auto* bl : bloods) bl->render(renderer);
             for (auto* s : smokes) s->render(renderer);
+            // simple HUD for PVE: show player health + bullet buff icon
+            if (font) {
+                SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+                // render notifications (centered on screen)
+                int validCount = 0;
+                for (auto &n : notifications) if ((int)n.text.size() != 0 && SDL_GetTicks() <= n.expiry) ++validCount;
+                int lineH = 20;
+                int notifY = WORLD_H/2 - (validCount * lineH) / 2;
+                for (auto it = notifications.begin(); it != notifications.end();) {
+                    if ((int)it->text.size() == 0 || SDL_GetTicks() > it->expiry) { it = notifications.erase(it); continue; }
+                    SDL_Color textColor = { 255, 220, 120, 255 };
+                    SDL_Surface* t = TTF_RenderText_Blended(font, it->text.c_str(), textColor);
+                    if (t) {
+                        SDL_Texture* tt = SDL_CreateTextureFromSurface(renderer, t);
+                        int tw = t->w, th = t->h;
+                        SDL_Rect td = { WORLD_W/2 - tw/2, notifY, tw, th };
+                        SDL_FreeSurface(t);
+                        if (tt) { SDL_RenderCopy(renderer, tt, NULL, &td); SDL_DestroyTexture(tt); }
+                    }
+                    notifY += lineH;
+                    ++it;
+                }
+                // compact panel for PVE
+                const int pvex = 8, pvey = 8;
+                const int pveW = 220, pveH = 48;
+                SDL_Rect panel = { pvex, pvey, pveW, pveH };
+                SDL_SetRenderDrawColor(renderer, 0, 0, 0, 160);
+                SDL_RenderFillRect(renderer, &panel);
+
+                // player name and compact health bar
+                std::string name = "Player";
+                SDL_Color textColor = { 230, 230, 230, 255 };
+                int textH = 0;
+                SDL_Surface* ts = TTF_RenderText_Blended(font, name.c_str(), textColor);
+                if (ts) {
+                    textH = ts->h;
+                    SDL_Texture* ttex = SDL_CreateTextureFromSurface(renderer, ts);
+                    SDL_Rect dst = { pvex + 8, pvey + 4, ts->w, textH };
+                    SDL_FreeSurface(ts);
+                    if (ttex) { SDL_RenderCopy(renderer, ttex, NULL, &dst); SDL_DestroyTexture(ttex); }
+                }
+                float hp = std::max(0.0f, player.get_health());
+                float hpfrac = std::min(1.0f, hp / 100.0f);
+                int hbY = pvey + textH + 8; // position below name
+                SDL_Rect hbBg = { pvex + 8, hbY, 140, 10 };
+                SDL_SetRenderDrawColor(renderer, 60, 60, 60, 200); SDL_RenderFillRect(renderer, &hbBg);
+                SDL_Rect hbFg = { pvex + 8, hbY, (int)(140 * hpfrac), 10 };
+                SDL_SetRenderDrawColor(renderer, (Uint8)(200 * (1.0f - hpfrac)), (Uint8)(200 * hpfrac), 50, 255); SDL_RenderFillRect(renderer, &hbFg);
+
+                // bullet buff icon (aligned to health bar)
+                SDL_Texture* btex = nullptr;
+                BulletBuffType bb = player.get_active_bullet_buff();
+                switch (bb) {
+                    case BulletBuffType::BOUNCING: btex = rm.get_texture("bounce-buff"); break;
+                    case BulletBuffType::EXPLODING: btex = rm.get_texture("explode-buff"); break;
+                    case BulletBuffType::PIERCING: btex = rm.get_texture("piercing-buff"); break;
+                    default: break;
+                }
+                if (btex) {
+                    SDL_Rect bdst = { pvex + 8 + 140 + 8, hbY - 6, 28, 28 };
+                    SDL_RenderCopy(renderer, btex, NULL, &bdst);
+                }
+            }
             SDL_RenderPresent(renderer);
             SDL_Delay(16);
         }
@@ -813,15 +1459,46 @@ int main (int argc, char *argv[]) {
             SDL_RenderClear(renderer);
         }
 
-        // Title
+        // Title - prefer an image if present; remove the gray placeholder box
         if (title_tex) {
             int tw, th; SDL_QueryTexture(title_tex, NULL, NULL, &tw, &th);
-            SDL_Rect tdst = { WINDOW_W/2 - tw/2, 80, tw, th };
+            // scale title by 40% (30% + 10% requested)
+            const float scale = 1.5f;
+            int dw = (int)std::round(tw * scale);
+            int dh = (int)std::round(th * scale);
+            // clamp to window width with 40px margin
+            if (dw > WINDOW_W - 40) {
+                float s2 = float(WINDOW_W - 40) / float(tw);
+                dw = WINDOW_W - 40;
+                dh = (int)std::round(th * s2);
+            }
+            // move up by 20% of window height (but not negative)
+            int titleY = 80 - (int)std::round(0.20f * WINDOW_H);
+            if (titleY < 8) titleY = 8;
+            SDL_Rect tdst = { WINDOW_W/2 - dw/2, titleY, dw, dh };
             SDL_RenderCopy(renderer, title_tex, NULL, &tdst);
         } else {
-            SDL_SetRenderDrawColor(renderer, 0x66, 0x66, 0x66, 0xFF);
-            SDL_Rect tdst = { WINDOW_W/2 - 200, 60, 400, 80 };
-            SDL_RenderFillRect(renderer, &tdst);
+            // try to (re)load title texture from assets if the initial load failed (try png then jpg)
+            if (!resourceManager.load_texture("title", "assets/pictures/title.png")) {
+                resourceManager.load_texture("title", "assets/pictures/title.jpg");
+            }
+            title_tex = resourceManager.get_texture("title");
+            if (title_tex) {
+                int tw, th; SDL_QueryTexture(title_tex, NULL, NULL, &tw, &th);
+                const float scale = 1.4f;
+                int dw = (int)std::round(tw * scale);
+                int dh = (int)std::round(th * scale);
+                if (dw > WINDOW_W - 40) {
+                    float s2 = float(WINDOW_W - 40) / float(tw);
+                    dw = WINDOW_W - 40;
+                    dh = (int)std::round(th * s2);
+                }
+                int titleY = 80 - (int)std::round(0.20f * WINDOW_H);
+                if (titleY < 8) titleY = 8;
+                SDL_Rect tdst = { WINDOW_W/2 - dw/2, titleY, dw, dh };
+                SDL_RenderCopy(renderer, title_tex, NULL, &tdst);
+            }
+            // else: do not draw the gray placeholder box; simply omit the title
         }
 
         // Options (draw rectangles and text)

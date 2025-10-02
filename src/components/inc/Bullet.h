@@ -36,10 +36,11 @@ public:
     ~Bullet();
 
 private:
+    const float _LIFE_TIME = 10.0;
     int _team_id;
     float _damage;
+    float _life_timer = _LIFE_TIME;
     Vector2 _init_direction;
     BulletBuffType _buffed;
     bool _is_destroyed = false;
-    // _hitbox_list is inherited from Entity
 };

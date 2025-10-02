@@ -20,9 +20,9 @@ private:
 public:
     static constexpr float DURATION_LIST[(size_t)BulletBuffType::NUM] {
         INFINITY, // NONE
-        2.0,      // BOUNCING
-        2.0,      // EXPLODING
-        2.0,      // PIERCING
+        30.0,     // BOUNCING
+        30.0,     // EXPLODING
+        30.0,     // PIERCING
     };
     BulletBuff(float duration, BulletBuffType type) : Buff(duration), _type(type) {}
     void timer_end() override;

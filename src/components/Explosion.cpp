@@ -4,10 +4,11 @@
 #include "inc/Circle.h"
 #include "inc/Obstacle.h"
 #include <SDL2/SDL.h>
+#include <unordered_set>
 
 Explosion::Explosion(SDL_Renderer* renderer, const std::string& sheetPath, Vector2 pos,
-                     int frameW, int frameH, int frameCount, int frameTime, int columns, float damage)
-    : Obstacle(pos, nullptr, {}), elapsed(0.0f), finished(false), _damage(damage) {
+                     int frameW, int frameH, int frameCount, int frameTime, int columns, float damage, int owner_team)
+    : Obstacle(pos, nullptr, {}), elapsed(0.0f), finished(false), _damage(damage), _owner_team(owner_team) {
     anim = new AnimatedSprite(renderer, sheetPath, frameW, frameH, frameCount, frameTime, columns);
     totalDurationMs = frameCount * frameTime;
     // Add a circular hitbox with radius equal to half the frame size
@@ -34,12 +35,19 @@ void Explosion::render(SDL_Renderer* renderer) {
 }
 
 void Explosion::collide(ICollidable* object) {
-    // If object is a Character, apply damage
+    // If object is a Character, apply damage once per-character
     if (Character* ch = dynamic_cast<Character*>(object)) {
-        for (auto* ch_hb : ch->get_hitboxes()) {
-            for (auto* ex_hb : _hitbox_list) {
-                if (ex_hb->is_collide(*ch_hb)) {
-                    ch->take_damage(_damage);
+        // if we've already damaged this character, skip
+        if (_damaged.find(ch) == _damaged.end()) {
+            for (auto* ch_hb : ch->get_hitboxes()) {
+                for (auto* ex_hb : _hitbox_list) {
+                    if (ex_hb->is_collide(*ch_hb)) {
+                        float dmg = _damage;
+                        ch->take_damage(dmg);
+                        _damaged.insert(ch);
+                        // only damage once per character
+                        return;
+                    }
                 }
             }
         }

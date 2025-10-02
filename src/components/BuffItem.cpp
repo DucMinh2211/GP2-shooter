@@ -3,7 +3,7 @@
 #include "inc/BuffItem.h"
 #include "inc/OBB.h"
 #include "inc/Character.h"
-#include "typeinfo"
+#include <typeinfo>
 
 
 BuffItem::BuffItem(Vector2 position, SDL_Texture *sprite, std::variant<CharBuffType, BulletBuffType> buff_type) : Obstacle(position, sprite, {}), _buff_type(buff_type) {
@@ -49,5 +49,13 @@ void BuffItem::collide(ICollidable* object) {
     } else {
         // Allow double-dispatch for Character consuming buff
         object->collide(this);
+    }
+}
+
+void BuffItem::update(float delta_time) {
+    if (_is_consumed) return;
+    _life_timer -= delta_time;
+    if (_life_timer <= 0.0f) {
+        _is_consumed = true;
     }
 }

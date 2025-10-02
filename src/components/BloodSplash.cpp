@@ -21,6 +21,6 @@ void BloodSplash::update(float dt) {
 
 void BloodSplash::render(SDL_Renderer* renderer) {
     if (finished) return;
-    anim->render(renderer, (int)_position.x - 12, (int)_position.y - 12, 1, 0.0);
+    anim->render(renderer, (int)_position.x - 14, (int)_position.y - 8, 1, 0.0);
 }
 

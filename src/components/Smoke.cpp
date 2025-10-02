@@ -20,5 +20,5 @@ void Smoke::update(float dt) {
 
 void Smoke::render(SDL_Renderer* renderer) {
     if (finished) return;
-    anim->render(renderer, (int)_position.x - 24, (int)_position.y - 24, 1, 0.0);
+    anim->render(renderer, (int)_position.x - 14, (int)_position.y - 12, 1, 0.0);
 }

@@ -16,13 +16,11 @@ class ResourceManager;
 enum class GunType {
     PISTOL = 1,
     AK = 2,
-    SHOTGUN = 3,
 };
 
 const std::pmr::unordered_map<GunType, float> SHOOT_DELAY_MAP {
-    {GunType::AK, 0.1},
-    {GunType::PISTOL, 0.3},
-    {GunType::SHOTGUN, 0.5}
+    {GunType::AK, 0.5},
+    {GunType::PISTOL, 1},
 };
 
 class IBuffable {
@@ -69,9 +67,12 @@ public:
     void render(SDL_Renderer *renderer) override;
     void render_activated_circle(SDL_Renderer *renderer);
 
+    bool is_dead() const { return this->_health <= 0; }
+
     // Public API for state modification
     void take_damage(float amount);
     void add_force(Vector2 force);
+    int get_input_set() const { return _input_set; }
     void set_animations(AnimatedSprite* idle, AnimatedSprite* run, AnimatedSprite* shoot, AnimatedSprite* dead = nullptr) {
         _idle_anim = idle;
         _run_anim  = run;
@@ -83,4 +84,10 @@ public:
     // Expose gun type accessors for game-mode logic
     GunType get_gun_type() const { return _gun_type; }
     void set_gun_type(GunType gt) { _gun_type = gt; _shoot_delay = SHOOT_DELAY_MAP.at(_gun_type); }
+    // Bullet buff control (allow game code to set/clear a character's active bullet buff)
+    void set_bullet_buff(BulletBuffType type) { _gun_buffed.set_type(type); }
+    void clear_bullet_buff() { _gun_buffed.set_type(BulletBuffType::NONE); }
+    // Debug helpers: report active bullet buff and active char buffs
+    BulletBuffType get_active_bullet_buff() const { return _gun_buffed.getType(); }
+    std::vector<CharBuffType> get_active_char_buffs() const;
 };

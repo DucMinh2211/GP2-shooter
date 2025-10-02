@@ -16,6 +16,8 @@
 #include "inc/OBB.h"
 
 Character::Character(Vector2 position, SDL_Texture* sprite, float speed, float health) : Entity(position, sprite, speed), _health(health) {
+    // Ensure health is capped at 100
+    if (this->_health > 100.0f) this->_health = 100.0f;
     // init buff_list
     for (int buff_type = 0; buff_type < (int)CharBuffType::NUM; buff_type++) {
         CharBuff buff =  CharBuff(CharBuff::DURATION_LIST[buff_type], (CharBuffType)buff_type, *this);
@@ -73,12 +75,11 @@ void Character::update(float delta_time) {
         }
     }
 
-    // update _shoot_delay
-    _shoot_delay -= delta_time;
-    std::max(_shoot_delay, 0.0f);
+    // update _shoot_delay (countdown and clamp to zero)
+    _shoot_delay = std::max(_shoot_delay - delta_time, 0.0f);
 
-    // update CharBuffList
-    for (CharBuff char_buff : _buff_list) {
+    // update CharBuffList (must update stored buffs by reference)
+    for (CharBuff &char_buff : _buff_list) {
         char_buff.update(delta_time);
     }
 
@@ -113,9 +114,9 @@ void Character::update(float delta_time) {
 void Character::set_direction(Vector2 direction) {
     _direction = direction;
     if (_direction.length_squared() > 0) {
-        _last_direction = _direction; // chỉ update khi có hướng di chuyển
-           // store angle in radians for hitbox transforms and internal logic
-           _angle = std::atan2(_direction.y, _direction.x);
+        _last_direction = _direction; // only update when moving
+        // store angle in radians (consistent with update() and OBB transforms)
+        _angle = std::atan2(_direction.y, _direction.x);
     }
 }
 
@@ -180,9 +181,11 @@ void Character::collide(ICollidable* object) {
                         CharBuffType char_buff_type = std::get<CharBuffType>(buff_type);
                         if (char_buff_type == CharBuffType::HEALTH) {
                             this->_health += 10;
+                            if (this->_health > 100.0f) this->_health = 100.0f;
                             buff_item->consume();
                         } else if (char_buff_type == CharBuffType::SPEED) {
-                            this->_speed += 100.0f;
+                            // apply a smaller speed boost
+                            this->_speed += 10.0f;
                             buff_item->consume();
                             this->_buff_list.at((size_t)char_buff_type).timer_start();
                         }
@@ -193,14 +196,12 @@ void Character::collide(ICollidable* object) {
         }
     }
     else if (Explosion *explosion = dynamic_cast<Explosion*>(object)) {
+        // Delegate damage handling to Explosion::collide which tracks per-character hits
         for (auto* char_hb : this->get_hitboxes()) {
             for (auto* e_hb : object->get_hitboxes()) {
                 if (char_hb->is_collide(*e_hb)) {
-                    if (explosion->damageable) {
-                        std::cout << "DMG!";
-                        this->_health -= explosion->get_damage();
-                        explosion->damageable = false;
-                    }
+                    // Let the explosion apply damage to this character (once)
+                    explosion->collide(this);
                     return;
                 }
             }
@@ -212,11 +213,19 @@ void Character::remove_buff(CharBuffType buff_type) {
     // TODO: implement
     switch (buff_type) {
         case CharBuffType::SPEED: {
-            this->_speed -= 100.0f;
+            this->_speed -= 50.0f;
             break;
         }
         default: return;
     }
+}
+
+std::vector<CharBuffType> Character::get_active_char_buffs() const {
+    std::vector<CharBuffType> active;
+    for (const CharBuff& cb : _buff_list) {
+        if (cb._activated) active.push_back(cb.get_type());
+    }
+    return active;
 }
 
 void Character::shoot(std::vector<Bullet*>& bullet_list, ResourceManager& resource_manager) {
@@ -225,10 +234,6 @@ void Character::shoot(std::vector<Bullet*>& bullet_list, ResourceManager& resour
 
 
     SDL_Texture* bullet_sprite = resource_manager.get_texture("bullet");
-    if (!bullet_sprite) {
-        // No bullet sprite available; skip creating bullets to avoid rendering null textures
-        return;
-    }
     // Create a bullet at the character's position, facing _direction
     Vector2 bullet_dir = (_direction.length_squared() > 0) ? _direction : _last_direction;
     Vector2 bullet_pos = {_position.x,_position.y };
@@ -237,9 +242,9 @@ void Character::shoot(std::vector<Bullet*>& bullet_list, ResourceManager& resour
     int hb_width = 15;
     int hb_height = 8;
 
-    // Tính tâm (center) của hitbox (nằm giữa sprite 24x24)
-    float hb_x = _position.x + 24.0f / 2.0f;
-    float hb_y = _position.y + 24.0f / 2.0f;
+    // Center the hitbox at the bullet spawn position
+    float hb_x = bullet_pos.x;
+    float hb_y = bullet_pos.y;
 
     // halfSize = (width/2, height/2)
     Vector2 halfSize(hb_width / 2.0f, hb_height / 2.0f);
@@ -253,7 +258,9 @@ void Character::shoot(std::vector<Bullet*>& bullet_list, ResourceManager& resour
 
     // Push bullet vào danh sách
     bullet_list.push_back(bullet);
-    _shoot_timer = _shoot_duration; 
+    _shoot_timer = _shoot_duration;
+    // set shot cooldown based on current gun type
+    _shoot_delay = SHOOT_DELAY_MAP.at(this->_gun_type);
 }
 
 void Character::render(SDL_Renderer* renderer) {
