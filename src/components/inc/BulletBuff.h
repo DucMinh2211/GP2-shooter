@@ -27,4 +27,5 @@ public:
     BulletBuff(float duration, BulletBuffType type) : Buff(duration), _type(type) {}
     void timer_end() override;
     BulletBuffType getType() const { return _type; }
+    void set_type(BulletBuffType type);
 };

@@ -27,7 +27,7 @@ BlackHole::~BlackHole() {
     _hitbox_list.clear();
 }
 
-void BlackHole::collide(ICollidable& object) {
+void BlackHole::collide(ICollidable* object) {
     // Define constants for the effect strength.
     const float SUCK_IN_FORCE = 50.0f;
     const float BSUCK_IN_FORCE = 200.0f;
@@ -35,7 +35,7 @@ void BlackHole::collide(ICollidable& object) {
     const float INNER_DAMAGE = 0.8f;
 
     // --- Character Collision ---
-    if (Character* character = dynamic_cast<Character*>(&object)) {
+    if (Character* character = dynamic_cast<Character*>(object)) {
         bool inner_collision = false;
         bool outer_collision = false;
 
@@ -69,7 +69,7 @@ void BlackHole::collide(ICollidable& object) {
     }
 
     // --- Bullet Collision ---
-    if (Bullet* bullet = dynamic_cast<Bullet*>(&object)) {
+    if (Bullet* bullet = dynamic_cast<Bullet*>(object)) {
         for (auto* bh_hb : this->get_hitboxes()) {
             for (auto* bullet_hb : bullet->get_hitboxes()) {
                 if (bh_hb->is_collide(*bullet_hb)) {
@@ -77,6 +77,9 @@ void BlackHole::collide(ICollidable& object) {
                     Vector2 pull_direction = _position - bullet->get_position();
                     if (pull_direction.length_squared() > 0) {
                         bullet->add_force(pull_direction.normalize() * BSUCK_IN_FORCE);
+                    }
+                    if (_hitbox_list[1]->is_collide(*bullet_hb)) {
+                        bullet->set_destroyed(true);
                     }
                     return; // Apply force once per bullet per frame
                 }
@@ -87,11 +90,17 @@ void BlackHole::collide(ICollidable& object) {
 
 // Logic has been moved to collide(), as requested.
 void BlackHole::update(float delta_time) {
-    // Empty
+    if (_anim) _anim->update(delta_time);
 }
 
 // Render the black hole's sprite.
 void BlackHole::render(SDL_Renderer* renderer) {
+    if (_anim) {
+        // AnimatedSprite render expects x,y center by our earlier change
+        _anim->render(renderer, (int)_position.x - 213, (int)_position.y - 205, 2, 0.0);
+        return;
+    }
+
     if (!_sprite) return;
 
     int w, h;

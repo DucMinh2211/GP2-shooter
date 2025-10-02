@@ -29,9 +29,11 @@ Wall::~Wall() {
     _hitbox_list.clear();
 }
 
-// A wall doesn't react to a collision; the other object is responsible for the response.
-void Wall::collide(ICollidable& object) {
-    // Empty
+// Delegate collision handling to the other object (Character, Bullet, etc.)
+void Wall::collide(ICollidable* object) {
+    if (object) {
+        object->collide(this);
+    }
 }
 
 // A stationary wall does not need to do anything during the update phase.

@@ -11,9 +11,13 @@
 class BuffItem : public Obstacle {
 private:
     std::variant<CharBuffType, BulletBuffType> _buff_type;
+    bool _is_consumed = false;
 public:
-    std::variant<CharBuffType, BulletBuffType> get_buff_type();
-    void collide(ICollidable& object) override;
-    void update(float delta_time) override;
+    BuffItem(Vector2 position, SDL_Texture *sprite, std::variant<CharBuffType, BulletBuffType> buff_type);
+    ~BuffItem();
+    std::variant<CharBuffType, BulletBuffType> get_buff_type() { return this->_buff_type; }
+    bool is_consumed() const { return _is_consumed; }
+    void collide(ICollidable* object) override;
+    void update(float delta_time) override {};
     void render(SDL_Renderer* renderer) override;
 };

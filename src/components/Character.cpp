@@ -3,6 +3,7 @@
 #include "inc/Bullet.h"
 #include "inc/CharBuff.h"
 #include "inc/Wall.h"
+#include "inc/BuffItem.h"
 #include "math/Vector2.h"
 #include "SDL2/SDL_render.h"
 #include <SDL2/SDL_error.h>
@@ -45,69 +46,106 @@ void update_character_hitboxes(Character* character) {
 }
 
 void Character::update(float delta_time) {
-    // Normalize the direction vector if it's not zero
-    if (this->_direction.length_squared() > 0) {
-        this->_direction.normalize();
+    // Dead logic: no movement, no shooting, play dead animation
+    if (_health <= 0.0f) {
+        _direction = Vector2{0,0};
+        _force = Vector2{0,0};
+        if (_dead_anim) _current_anim = _dead_anim; else _current_anim = _idle_anim;
+        if (_current_anim) _current_anim->update(delta_time);
+        return;
     }
 
-    // Calculate velocity from input and speed
-    Vector2 input_velocity = this->_direction * this->_speed;
+    if (_direction.length_squared() > 0) {
+        _direction.normalize();
+        _last_direction = _direction;
+        _angle = std::atan2(_direction.y, _direction.x);
+    }
 
-    // Combine with external forces from the previous frame's collisions
-    Vector2 final_velocity = input_velocity + this->_force;
+    Vector2 velocity = _direction * _speed + _force;
 
-    // Store movement vector and update position
-    this->_last_move_vec = final_velocity * delta_time;
-    this->_position += this->_last_move_vec;
+    // store last movement delta so collisions with walls can undo it
+    _last_move_vec = velocity * delta_time;
+    _position += _last_move_vec;
+    for (auto* hb : _hitbox_list) {
+        if (auto* obb = dynamic_cast<OBB*>(hb)) {
+            obb->set_transform(_position, _angle); // cập nhật center và góc
+        }
+    }
 
-    // Update hitboxes to follow the character
-    update_character_hitboxes(this);
+    // update _shoot_delay
+    _shoot_delay -= delta_time;
+    std::max(_shoot_delay, 0.0f);
 
-    // Reset force for the next frame
-    _force = ZERO;
+    // cập nhật shoot timer
+    if (_shoot_timer > 0.0f) {
+        _shoot_timer -= delta_time;
+        _current_anim = _shoot_anim;
+    } else if (_direction.length_squared() == 0) {
+        _current_anim = _idle_anim;
+    } else {
+        _current_anim = _run_anim;
+    }
+
+    if (_current_anim)
+        _current_anim->update(delta_time);
+    _force = Vector2{0,0};
+
+    // Keep character inside world bounds (use character hitbox half-size of 8)
+    const float halfSize = 8.0f;
+    if (_position.x < halfSize) _position.x = halfSize;
+    if (_position.y < halfSize) _position.y = halfSize;
+    if (_position.x > WORLD_W - halfSize) _position.x = WORLD_W - halfSize;
+    if (_position.y > WORLD_H - halfSize) _position.y = WORLD_H - halfSize;
+    _force = Vector2{0,0};
+    // reset lực hoặc flag nếu muốn
 }
+
 
 void Character::set_direction(Vector2 direction) {
     _direction = direction;
     if (_direction.length_squared() > 0) {
         _last_direction = _direction; // chỉ update khi có hướng di chuyển
+        _angle = std::atan2(_direction.y, _direction.x) * 180.0f / PI;
     }
 }
 
 void Character::take_damage(float amount) {
-    this->_health -= amount;
+    this->_health -= amount/10;
+    this->_health = std::max(this->_health, 0.0f);
 }
 
 void Character::add_force(Vector2 force) {
     this->_force += force;
 }
 
-void Character::collide(ICollidable& object) {
-    if (typeid(object) == typeid(Bullet)) {
-        Bullet* bullet = dynamic_cast<Bullet*>(&object);
+void Character::collide(ICollidable* object) {
+    if (typeid(*object) == typeid(Bullet)) {
+        Bullet* bullet = dynamic_cast<Bullet*>(object);
         if (!bullet || bullet->get_team_id() == this->_input_set) {
             return; // Not a bullet or friendly fire
         }
 
         for (auto* char_hb : this->get_hitboxes()) {
-            for (auto* bullet_hb : object.get_hitboxes()) {
+            for (auto* bullet_hb : object->get_hitboxes()) {
                 if (char_hb->is_collide(*bullet_hb)) {
                     // Collision detected, apply damage and exit
                     this->_health -= bullet->get_damage();
-                    if (this->_health <= 0) {
-                        // std::cout << "player dead\n";
+                    if (this->_health <= 0.0f) {
+                        std::cout << "player dead\n";
                     }
+                    this->_health = std::max(this->_health, 0.0f);
+                    bullet->set_destroyed(true);
                     return;
                 }
             }
         }
     }
-    else if (typeid(object) == typeid(Wall)) {
-        Wall* wall = dynamic_cast<Wall*>(&object);
+    else if (typeid(*object) == typeid(Wall)) {
+        Wall* wall = dynamic_cast<Wall*>(object);
         if (!wall) return;
 
         for (auto* char_hb : this->get_hitboxes()) {
-            for (auto* wall_hb : object.get_hitboxes()) {
+            for (auto* wall_hb : object->get_hitboxes()) {
                 if (char_hb->is_collide(*wall_hb)) {
                     // Collision with wall detected, undo last movement.
                     this->_position -= this->_last_move_vec;
@@ -117,17 +155,51 @@ void Character::collide(ICollidable& object) {
             }
         }
     }
+    else if (typeid(*object) == typeid(BuffItem)) {
+        BuffItem* buff_item = dynamic_cast<BuffItem*>(object);
+        if (!buff_item) return;
+
+        for (auto* char_hb : this->get_hitboxes()) {
+            for (auto* buff_hb : object->get_hitboxes()) {
+                if (char_hb->is_collide(*buff_hb)) {
+                    std::variant<CharBuffType, BulletBuffType> buff_type = buff_item->get_buff_type();
+                    if (std::holds_alternative<BulletBuffType>(buff_type)) {
+                        this->_gun_buffed.set_type(std::get<BulletBuffType>(buff_type));
+                    } else if (std::holds_alternative<CharBuffType>(buff_type)) {
+                        CharBuffType char_buff_type = std::get<CharBuffType>(buff_type);
+                        if (char_buff_type == CharBuffType::HEALTH) {
+                            this->_health += 10;
+                        } else if (char_buff_type == CharBuffType::SPEED) {
+                            this->_speed += 100.0f;
+                        }
+                    }
+                    return;
+                }
+            }
+        }
+    }
 }
 
 void Character::remove_buff(CharBuffType buff_type) {
     // TODO: implement
+    switch (buff_type) {
+        case CharBuffType::SPEED: {
+            this->_speed -= 100.0f;
+            break;
+        }
+        default: return;
+    }
 }
 
 void Character::shoot(std::vector<Bullet*>& bullet_list, ResourceManager& resource_manager) {
+    if (_health <= 0.0f) return; // dead can't shoot
+    if (this->_shoot_delay > 0) return;
+
+
     SDL_Texture* bullet_sprite = resource_manager.get_texture("bullet");
     // Create a bullet at the character's position, facing _direction
     Vector2 bullet_dir = (_direction.length_squared() > 0) ? _direction : _last_direction;
-    Vector2 bullet_pos = {_position.x - 10,_position.y - 10};
+    Vector2 bullet_pos = {_position.x,_position.y };
     std::cout << "input_set when shoot " << this->_input_set << "\n";
     Bullet* bullet = new Bullet(bullet_pos, bullet_sprite, BULLET_SPEED, 10.0f, bullet_dir, _gun_buffed.getType(), this->_input_set);
     int hb_width = 15;
@@ -149,10 +221,16 @@ void Character::shoot(std::vector<Bullet*>& bullet_list, ResourceManager& resour
 
     // Push bullet vào danh sách
     bullet_list.push_back(bullet);
+    _shoot_timer = _shoot_duration; 
 }
 
 void Character::render(SDL_Renderer* renderer) {
     // TODO: implement
+    if (_current_anim) {
+    Vector2 pos = get_position();
+    double angle_deg = _angle * 180.0 / M_PI;
+    _current_anim->render(renderer, (int)pos.x - 12, (int)pos.y - 8, 1,angle_deg);
+    }
 
     if (this->_activated) this->render_activated_circle(renderer);
 }

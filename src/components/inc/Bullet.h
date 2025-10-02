@@ -13,7 +13,7 @@ public:
     float get_damage() { return this->_damage; }
     int get_team_id() { return this->_team_id; }
     void update(float delta_time) override;
-    void collide(ICollidable& object) override;
+    void collide(ICollidable* object) override;
     void add_hitbox(HitBox* hitbox);
     void update_hitboxes();
     std::vector<HitBox*>& get_hitboxes() override { return _hitbox_list; }
@@ -27,11 +27,15 @@ public:
     void setBuff(BulletBuffType buff) { _buffed = buff; }
     BulletBuffType getBuff() const { return _buffed; }
     Vector2 get_init_direction() const { return _init_direction; }
+    bool is_destroyed() const { return _is_destroyed; }
+    void set_destroyed(bool destroyed = true) { _is_destroyed = destroyed; }
+    ~Bullet();
 
 private:
     int _team_id;
     float _damage;
     Vector2 _init_direction;
     BulletBuffType _buffed;
+    bool _is_destroyed = false;
     // _hitbox_list is inherited from Entity
 };
