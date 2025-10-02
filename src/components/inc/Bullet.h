@@ -6,6 +6,9 @@
 #include "SDL2/SDL_render.h"
 #include "IRenderable.h"
 #include "Rect.h" // Add this include for Rect
+#include <vector>
+
+class Explosion;
 
 class Bullet : public Entity, public IRenderable {
 public:
@@ -19,6 +22,7 @@ public:
     std::vector<HitBox*>& get_hitboxes() override { return _hitbox_list; }
     void render(SDL_Renderer* renderer) override;
     void add_force(Vector2 force);
+    void explode(std::vector<Explosion*>& explosion_list, SDL_Renderer* renderer);
 
     // Buff helpers
     bool isBouncing() const { return _buffed == BulletBuffType::BOUNCING; }

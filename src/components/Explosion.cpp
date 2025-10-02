@@ -2,6 +2,7 @@
 #include "inc/Character.h"
 #include "inc/Bullet.h"
 #include "inc/Circle.h"
+#include "inc/Obstacle.h"
 #include <SDL2/SDL.h>
 
 Explosion::Explosion(SDL_Renderer* renderer, const std::string& sheetPath, Vector2 pos,
@@ -50,7 +51,7 @@ void Explosion::collide(ICollidable* object) {
             for (auto* ex_hb : _hitbox_list) {
                 if (ex_hb->is_collide(*b_hb)) {
                     // apply damage (we'll remove bullet externally)
-                    b->add_force(Vector2(0,0)); // placeholder, could set destroyed flag
+                    b->set_destroyed(true);
                 }
             }
         }

@@ -4,6 +4,7 @@
 #include <SDL2/SDL_render.h>
 #include <SDL2/SDL_video.h>
 #include <SDL2/SDL_ttf.h>
+#include <algorithm>
 #include <cstdlib>
 #include <iostream>
 #include <vector>
@@ -166,6 +167,9 @@ int main (int argc, char *argv[]) {
     BuffItem* health_buff = new BuffItem(Vector2(100, WORLD_H - 100.0f), health_buff_texture ? health_buff_texture : green_texture, CharBuffType::HEALTH);
 
     BuffItem* bounce_buff = new BuffItem(Vector2(160, WORLD_H - 100.0f), green_texture, BulletBuffType::BOUNCING);
+    BuffItem* explode_buff = new BuffItem(Vector2(220, WORLD_H - 100.0f), green_texture, BulletBuffType::EXPLODING);
+
+    std::vector<BuffItem*> buff_items {health_buff, bounce_buff, explode_buff};
 
     std::vector<Bullet*> bullet_list;
     // Explosions for testing (150x150 frames, 12 frames, 3 columns)
@@ -181,6 +185,7 @@ int main (int argc, char *argv[]) {
     updatable_list.push_back(&blackhole);
     updatable_list.push_back(health_buff);
     updatable_list.push_back(bounce_buff);
+    updatable_list.push_back(explode_buff);
     //
 
     // main loop
@@ -198,7 +203,7 @@ int main (int argc, char *argv[]) {
                 // Spawn explosion on E key press
                 if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_E) {
                     Vector2 pos = blackhole.get_position() - Vector2(50, 50); 
-                    Explosion* e = new Explosion(renderer, "assets/pictures/rielno.png", pos, 50, 50, 9, 40, 3);
+                    Explosion* e = new Explosion(renderer, "assets/pictures/rielno.png", pos, 50, 50, 9, 40, 3, 10.0f);
                     explosions.push_back(e);
                 }
             }
@@ -218,15 +223,6 @@ int main (int argc, char *argv[]) {
             bullet->update(delta_time);
         }
 
-        // Update explosions and remove finished ones
-        for (auto* e : explosions) e->update(delta_time);
-        // remove finished
-        explosions.erase(std::remove_if(explosions.begin(), explosions.end(), [](Explosion* e){
-            if (e->is_finished()) { delete e; return true; }
-            return false;
-        }), explosions.end());
-
-
         // check for collision
         for (auto& bullet : bullet_list) {
             blackhole.collide(bullet);
@@ -238,41 +234,57 @@ int main (int argc, char *argv[]) {
 
         for (auto& character : characters) {
             blackhole.collide(character);
-            if (health_buff) {
-                health_buff->collide(character);
-                character->collide(health_buff);
-            }
-            if (bounce_buff) {
-                bounce_buff->collide(character);
-                character->collide(bounce_buff);
+            for (BuffItem* buff : buff_items) {
+                character->collide(buff);
             }
             // Wall collision
             character->collide(&far_wall);
         }
 
-        // Handle consumed buff item
-        if (health_buff && health_buff->is_consumed()) {
-            // Remove from updatable_list
-            for (size_t i = 0; i < updatable_list.size(); ++i) {
-                if (updatable_list[i] == health_buff) {
-                    updatable_list.erase(updatable_list.begin() + i);
-                    break;
+        // Explosion collision with characters
+        for (auto* explosion : explosions) {
+            for (auto& character : characters) {
+                character->collide(explosion);
+            }
+        }
+
+        // Handle consumed buff item (also remove from updatable_list to avoid use-after-free)
+        {
+            auto it = buff_items.begin();
+            while (it != buff_items.end()) {
+                BuffItem* buff = *it;
+                if (buff->is_consumed()) {
+                    updatable_list.erase(std::remove(updatable_list.begin(), updatable_list.end(), static_cast<IUpdatable*>(buff)), updatable_list.end());
+                    delete buff;
+                    it = buff_items.erase(it);
+                } else {
+                    ++it;
                 }
             }
-            delete health_buff;
-            health_buff = nullptr;
         }
 
         // Handle destroyed bullets
         bullet_list.erase(std::remove_if(bullet_list.begin(), bullet_list.end(),
-            [](Bullet* bullet) {
+            [&explosions, renderer](Bullet* bullet) {
                 if (bullet->is_destroyed()) {
+                    if (bullet->getBuff() == BulletBuffType::EXPLODING) {
+                        bullet->explode(explosions, renderer);
+                    }
                     delete bullet;
                     return true;
                 }
                 return false;
             }),
             bullet_list.end());
+
+        // Update explosions and remove finished ones
+        for (auto* e : explosions) e->update(delta_time);
+        // remove finished
+        explosions.erase(std::remove_if(explosions.begin(), explosions.end(), [](Explosion* e){
+            if (e->is_finished()) { delete e; return true; }
+            return false;
+        }), explosions.end());
+
 
         // --- Rendering ---
         SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0x00); // Set draw color to black
@@ -305,17 +317,13 @@ int main (int argc, char *argv[]) {
         //     hb->debug_draw(renderer, {0, 0, 255, 255}); // Blue to see it clearly
         // }
 
+        for (BuffItem* buff : buff_items) {
+            buff->render(renderer);
+        }
 
         // Render activation circles on top of everything
         for (auto& character : characters) {
             character->render(renderer);
-        }
-
-        if (health_buff) {
-            health_buff->render(renderer);
-        }
-        if (bounce_buff) {
-            bounce_buff->render(renderer);
         }
 
         // Render player health UI
@@ -362,9 +370,11 @@ int main (int argc, char *argv[]) {
     }
     bullet_list.clear();
 
-    if (health_buff) {
-        delete health_buff;
+    for (BuffItem* buff : buff_items) {
+        delete buff;
     }
+    buff_items.clear();
+
     resource_manager.unload_all();
 
     // Quit SDL
