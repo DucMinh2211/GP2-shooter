@@ -23,9 +23,9 @@ public:
               float dps_outer = 5.0f, float dps_inner = 15.0f);
     ~BlackHole();
 
+    void collide(ICollidable* object) override;
     void set_animation(AnimatedSprite* anim) { _anim = anim; }
 
-    void collide(ICollidable& object) override;
     void update(float delta_time) override;
     void render(SDL_Renderer* renderer) override;
 

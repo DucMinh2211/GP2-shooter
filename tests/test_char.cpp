@@ -3,21 +3,31 @@
 #include <SDL2/SDL_events.h>
 #include <SDL2/SDL_render.h>
 #include <SDL2/SDL_video.h>
+#include <SDL2/SDL_ttf.h>
 #include <cstdlib>
 #include <iostream>
 #include <vector>
 #include "Constant.h"
 #include "ResourceManager.h"
+#include "math/Vector2.h"
 #include "components/inc/Character.h"
 #include "components/inc/IRenderable.h"
 #include "components/inc/IUpdatable.h"
 #include "components/inc/InputHandler.h"
 #include "components/inc/Bullet.h"
-#include "math/Vector2.h"
 #include "components/inc/BlackHole.h"
+<<<<<<< HEAD
 #include "components/inc/Circle.h"
 #include "components/inc/OBB.h"
 #include "components/inc/Explosion.h"
+=======
+#include "components/inc/AnimatedSprite.h"
+#include "components/inc/BuffItem.h"
+#include "components/inc/Explosion.h"
+#include "components/inc/Wall.h"
+#include <string>
+#include <sstream>
+>>>>>>> origin/main
 
 
 
@@ -53,6 +63,7 @@ int main (int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
+<<<<<<< HEAD
     // Set the logical size for rendering to scale the world to the window
     SDL_RenderSetLogicalSize(renderer, WORLD_W, WORLD_H);
 
@@ -67,6 +78,41 @@ int main (int argc, char *argv[]) {
     SDL_FreeSurface(red_surface);
     SDL_SetTextureBlendMode(red_texture, SDL_BLENDMODE_BLEND); // cho phép alpha
 
+=======
+    // Initialize TTF
+    if (TTF_Init() == -1) {
+        std::cerr << "TTF_Init failed: " << TTF_GetError() << std::endl;
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return EXIT_FAILURE;
+    }
+
+    TTF_Font* font = TTF_OpenFont("assets/fonts/Slabo27px-Regular.ttf", 24);
+    if (font == nullptr) {
+        std::cerr << "Failed to load font: " << TTF_GetError() << std::endl;
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        TTF_Quit();
+        return EXIT_FAILURE;
+    }
+
+    // Set the logical size for rendering to scale the world to the window
+    SDL_RenderSetLogicalSize(renderer, WORLD_W, WORLD_H);
+
+
+    ResourceManager resource_manager(renderer);
+
+    // Create a transparent texture for team 1
+    SDL_Surface* red_surface = SDL_CreateRGBSurface(0, 16, 16, 32,
+        0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000); // RGBA masks
+    SDL_FillRect(red_surface, NULL, SDL_MapRGBA(red_surface->format, 0, 0, 0, 0));
+    SDL_Texture* red_texture = SDL_CreateTextureFromSurface(renderer, red_surface);
+    SDL_FreeSurface(red_surface);
+    SDL_SetTextureBlendMode(red_texture, SDL_BLENDMODE_BLEND); // cho phép alpha
+
+>>>>>>> origin/main
     // Create a transparent texture for team 2
     SDL_Surface* blue_surface = SDL_CreateRGBSurface(0, 16, 16, 32,
         0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000); // RGBA masks
@@ -74,6 +120,22 @@ int main (int argc, char *argv[]) {
     SDL_Texture* blue_texture = SDL_CreateTextureFromSurface(renderer, blue_surface);
     SDL_FreeSurface(blue_surface);
     SDL_SetTextureBlendMode(blue_texture, SDL_BLENDMODE_BLEND);
+<<<<<<< HEAD
+=======
+
+    // Create a green texture for buff items
+    SDL_Surface* green_surface = SDL_CreateRGBSurface(0, 16, 16, 32, 0, 255, 0, 0);
+    SDL_FillRect(green_surface, NULL, SDL_MapRGB(green_surface->format, 0, 255, 0));
+    SDL_Texture* green_texture = SDL_CreateTextureFromSurface(renderer, green_surface);
+    SDL_FreeSurface(green_surface);
+    if (green_texture == nullptr) {
+        std::cerr << "Texture creation failed" << SDL_GetError();
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return EXIT_FAILURE;
+    }
+>>>>>>> origin/main
 
     if (!resource_manager.load_texture("bullet", "assets/pictures/bulletA.png")) {
         std::cerr << "Failed to load bullet sprite!\n";
@@ -83,11 +145,24 @@ int main (int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
+    // Walls: create four walls forming bounds. Use simple colored textures
+    SDL_Surface* wall_surf = SDL_CreateRGBSurface(0, 100, 100, 32, 0x00FF0000,0x0000FF00,0x000000FF,0xFF000000);
+    SDL_FillRect(wall_surf, NULL, SDL_MapRGBA(wall_surf->format, 80, 80, 80, 255));
+    SDL_Texture* wall_tex = SDL_CreateTextureFromSurface(renderer, wall_surf);
+    SDL_FreeSurface(wall_surf);
+
+    Wall far_wall(Vector2(WORLD_W / 2.0f, WORLD_H - 100), wall_tex);
+
     // setup
     // Team 1 (red)
     
+<<<<<<< HEAD
     Character player1_1(Vector2(100.0f, WORLD_H / 2.0f - 50.0f), red_texture, 100.0f, 100.0f);
     Character player1_2(Vector2(100.0f, WORLD_H / 2.0f + 50.0f), red_texture, 100.0f, 100.0f);
+=======
+    Character player1_1(Vector2(100.0f, WORLD_H / 2.0f - 50.0f), red_texture, 200.0f, 100.0f);
+    Character player1_2(Vector2(100.0f, WORLD_H / 2.0f + 90.0f), red_texture, 200.0f, 100.0f);
+>>>>>>> origin/main
     AnimatedSprite idle(renderer, "assets/pictures/PlayerIdle.png", 24, 16, 5, 100);
     AnimatedSprite run(renderer,  "assets/pictures/PlayerRunning.png", 24, 16, 5, 100);
     AnimatedSprite shoot(renderer,"assets/pictures/PlayerShooting.png", 24, 16, 5, 100);
@@ -100,7 +175,11 @@ int main (int argc, char *argv[]) {
     
     // Team 2 (blue)
     Character player2_1(Vector2(WORLD_W - 100.0f, WORLD_H / 2.0f - 50.0f), blue_texture, 100.0f, 100.0f);
+<<<<<<< HEAD
     Character player2_2(Vector2(WORLD_W - 100.0f, WORLD_H / 2.0f + 50.0f), blue_texture, 100.0f, 100.0f);
+=======
+    Character player2_2(Vector2(WORLD_W - 100.0f, WORLD_H / 2.0f + 90.0f), blue_texture, 100.0f, 100.0f);
+>>>>>>> origin/main
     player2_1.set_animations(&idle, &run, &shoot);
     player2_2.set_animations(&idle1, &run1, &shoot1);
     std::vector<Character*> characters;
@@ -117,6 +196,15 @@ int main (int argc, char *argv[]) {
                     65.0f, 30.0f, // outer radius, inner radius
                     5.0f, 15.0f);  // outer dps, inner dps
     blackhole.set_animation(&blackhole_anim);
+<<<<<<< HEAD
+=======
+
+    SDL_Texture* health_buff_texture = resource_manager.load_texture("health-buff", "assets/pictures/health-buff.png");
+    BuffItem* health_buff = new BuffItem(Vector2(100, WORLD_H - 100.0f), health_buff_texture ? health_buff_texture : green_texture, CharBuffType::HEALTH);
+
+    BuffItem* bounce_buff = new BuffItem(Vector2(160, WORLD_H - 100.0f), green_texture, BulletBuffType::BOUNCING);
+
+>>>>>>> origin/main
     std::vector<Bullet*> bullet_list;
     // Explosions for testing (150x150 frames, 12 frames, 3 columns)
     std::vector<Explosion*> explosions;
@@ -129,6 +217,8 @@ int main (int argc, char *argv[]) {
     updatable_list.push_back(&input_handler);
     updatable_list.push_back(&input_handler2);
     updatable_list.push_back(&blackhole);
+    updatable_list.push_back(health_buff);
+    updatable_list.push_back(bounce_buff);
     //
 
     // main loop
@@ -177,30 +267,56 @@ int main (int argc, char *argv[]) {
 
         // check for collision
         for (auto& bullet : bullet_list) {
-            blackhole.collide(*bullet);
+            blackhole.collide(bullet);
+            far_wall.collide(bullet);
             for (auto& character : characters) {
-                character->collide(*bullet);
+                character->collide(bullet);
             }
         }
 
         for (auto& character : characters) {
-            blackhole.collide(*character);
+            blackhole.collide(character);
+            if (health_buff) {
+                health_buff->collide(character);
+                character->collide(health_buff);
+            }
+            if (bounce_buff) {
+                bounce_buff->collide(character);
+                character->collide(bounce_buff);
+            }
+            // Wall collision
+            character->collide(&far_wall);
         }
+
+        // Handle consumed buff item
+        if (health_buff && health_buff->is_consumed()) {
+            // Remove from updatable_list
+            for (size_t i = 0; i < updatable_list.size(); ++i) {
+                if (updatable_list[i] == health_buff) {
+                    updatable_list.erase(updatable_list.begin() + i);
+                    break;
+                }
+            }
+            delete health_buff;
+            health_buff = nullptr;
+        }
+
+        // Handle destroyed bullets
+        bullet_list.erase(std::remove_if(bullet_list.begin(), bullet_list.end(),
+            [](Bullet* bullet) {
+                if (bullet->is_destroyed()) {
+                    delete bullet;
+                    return true;
+                }
+                return false;
+            }),
+            bullet_list.end());
 
         // --- Rendering ---
         SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0x00); // Set draw color to black
         SDL_RenderClear(renderer);                            // Clear the screen
 
         // Render character sprites
-        for (auto& character : characters) {
-            Vector2 pos = character->get_position();
-            const SDL_Texture* tex = character->get_sprite();
-            if (tex) {
-                SDL_Rect dstRect = { (int)pos.x - 8, (int)pos.y - 8, 16, 16 };
-                SDL_RenderCopy(renderer, const_cast<SDL_Texture*>(tex), NULL, &dstRect);
-            }
-        }
-
         // render bullets
         for (Bullet* bullet : bullet_list) {
             IRenderable* obj = dynamic_cast<IRenderable*>(bullet);
@@ -208,6 +324,10 @@ int main (int argc, char *argv[]) {
         }
         // render black hole animation/sprite
         blackhole.render(renderer);
+<<<<<<< HEAD
+=======
+        far_wall.render(renderer);
+>>>>>>> origin/main
     // render explosions
     for (auto* e : explosions) 
     {
@@ -232,17 +352,70 @@ int main (int argc, char *argv[]) {
             character->render(renderer);
         }
 
+        if (health_buff) {
+            health_buff->render(renderer);
+        }
+        if (bounce_buff) {
+            bounce_buff->render(renderer);
+        }
+
+        // Render player health UI
+        SDL_Color text_color = {255, 255, 255, 255}; // White color
+
+        auto bulletBuffToString = [](BulletBuffType t){
+            switch(t){
+                case BulletBuffType::NONE: return "NONE";
+                case BulletBuffType::BOUNCING: return "BOUNCING";
+                case BulletBuffType::EXPLODING: return "EXPLODING";
+                case BulletBuffType::PIERCING: return "PIERCING";
+                default: return "UNKNOWN";
+            }
+        };
+
+        struct PlayerInfo { const char* name; Character* ch; int x; int y; };
+        std::vector<PlayerInfo> infos = {
+            {"Player1_1", &player1_1, 10, 10},
+            {"Player1_2", &player1_2, 10, 70},
+            {"Player2_1", &player2_1, WORLD_W - 210, 10},
+            {"Player2_2", &player2_2, WORLD_W - 210, 70}
+        };
+
+        for (auto& info : infos) {
+            std::stringstream ss;
+            ss << info.name << "\nHealth: " << (int)info.ch->get_health() << "\n" << bulletBuffToString(info.ch->get_gun_buff_type());
+            SDL_Surface* surf = TTF_RenderText_Blended_Wrapped(font, ss.str().c_str(), text_color, 200);
+            if (surf) {
+                SDL_Texture* tex = SDL_CreateTextureFromSurface(renderer, surf);
+                SDL_Rect dst = { info.x, info.y, surf->w, surf->h };
+                SDL_FreeSurface(surf);
+                if (tex) {
+                    SDL_RenderCopy(renderer, tex, NULL, &dst);
+                    SDL_DestroyTexture(tex);
+                }
+            }
+        }
 
         SDL_RenderPresent(renderer);                          // Update the screen
     }
 
+    for (Bullet* bullet : bullet_list) {
+        delete bullet;
+    }
+    bullet_list.clear();
+
+    if (health_buff) {
+        delete health_buff;
+    }
     resource_manager.unload_all();
 
     // Quit SDL
     SDL_DestroyTexture(red_texture);
     SDL_DestroyTexture(blue_texture);
+    SDL_DestroyTexture(green_texture);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
+    TTF_CloseFont(font);
+    TTF_Quit();
     SDL_Quit();
     return EXIT_SUCCESS;
 }

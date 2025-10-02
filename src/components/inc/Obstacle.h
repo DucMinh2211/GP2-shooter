@@ -22,6 +22,6 @@ public:
     Vector2 get_position() const { return this->_position; }
     const SDL_Texture* get_sprite() const { return this->_sprite; };
     virtual void update(float delta_time) override = 0;
-    virtual void collide(ICollidable& object) override = 0;
+    virtual void collide(ICollidable* object) override = 0;
     virtual void render(SDL_Renderer* renderer) override = 0;
 };

@@ -1,6 +1,7 @@
 #include "inc/Explosion.h"
 #include "inc/Character.h"
 #include "inc/Bullet.h"
+#include "inc/Circle.h"
 #include <SDL2/SDL.h>
 
 Explosion::Explosion(SDL_Renderer* renderer, const std::string& sheetPath, Vector2 pos,
@@ -31,9 +32,9 @@ void Explosion::render(SDL_Renderer* renderer) {
     anim->render(renderer, (int)_position.x - 30, (int)_position.y - 26, 1, 0.0);
 }
 
-void Explosion::collide(ICollidable& object) {
+void Explosion::collide(ICollidable* object) {
     // If object is a Character, apply damage
-    if (Character* ch = dynamic_cast<Character*>(&object)) {
+    if (Character* ch = dynamic_cast<Character*>(object)) {
         for (auto* ch_hb : ch->get_hitboxes()) {
             for (auto* ex_hb : _hitbox_list) {
                 if (ex_hb->is_collide(*ch_hb)) {
@@ -44,7 +45,7 @@ void Explosion::collide(ICollidable& object) {
     }
 
     // If object is a Bullet, destroy or apply force
-    if (Bullet* b = dynamic_cast<Bullet*>(&object)) {
+    if (Bullet* b = dynamic_cast<Bullet*>(object)) {
         for (auto* b_hb : b->get_hitboxes()) {
             for (auto* ex_hb : _hitbox_list) {
                 if (ex_hb->is_collide(*b_hb)) {

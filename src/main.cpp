@@ -195,17 +195,25 @@ int main (int argc, char *argv[]) {
         InputHandler ih1(InputSet::INPUT_1, &p1, &p2);
         InputHandler ih2(InputSet::INPUT_2, &p3, &p4);
 
-        // Walls: create four walls forming bounds. Use simple colored textures
-        SDL_Surface* wall_surf = SDL_CreateRGBSurface(0, 100, 100, 32, 0x00FF0000,0x0000FF00,0x000000FF,0xFF000000);
-        SDL_FillRect(wall_surf, NULL, SDL_MapRGBA(wall_surf->format, 80, 80, 80, 255));
-        SDL_Texture* wall_tex = SDL_CreateTextureFromSurface(renderer, wall_surf);
-        SDL_FreeSurface(wall_surf);
+    // Walls: create four walls forming bounds. Make horizontal strips for top/bottom and vertical strips for left/right
+    const int wall_thickness = 32;
+    // Horizontal wall texture (width = WORLD_W, height = wall_thickness)
+    SDL_Surface* wall_surf_h = SDL_CreateRGBSurface(0, WORLD_W, wall_thickness, 32, 0x00FF0000,0x0000FF00,0x000000FF,0xFF000000);
+    SDL_FillRect(wall_surf_h, NULL, SDL_MapRGBA(wall_surf_h->format, 80, 80, 80, 255));
+    SDL_Texture* wall_tex_h = SDL_CreateTextureFromSurface(renderer, wall_surf_h);
+    SDL_FreeSurface(wall_surf_h);
 
-        // Create four Wall objects
-        Wall topWall(Vector2(WORLD_W/2.0f, 0.0f + 16.0f), wall_tex);
-        Wall bottomWall(Vector2(WORLD_W/2.0f, WORLD_H - 16.0f), wall_tex);
-        Wall leftWall(Vector2(0.0f + 16.0f, WORLD_H/2.0f), wall_tex);
-        Wall rightWall(Vector2(WORLD_W - 16.0f, WORLD_H/2.0f), wall_tex);
+    // Vertical wall texture (width = wall_thickness, height = WORLD_H)
+    SDL_Surface* wall_surf_v = SDL_CreateRGBSurface(0, wall_thickness, WORLD_H, 32, 0x00FF0000,0x0000FF00,0x000000FF,0xFF000000);
+    SDL_FillRect(wall_surf_v, NULL, SDL_MapRGBA(wall_surf_v->format, 80, 80, 80, 255));
+    SDL_Texture* wall_tex_v = SDL_CreateTextureFromSurface(renderer, wall_surf_v);
+    SDL_FreeSurface(wall_surf_v);
+
+    // Create four Wall objects positioned to cover the edges
+    Wall topWall(Vector2(WORLD_W/2.0f, wall_thickness / 2.0f), wall_tex_h);
+    Wall bottomWall(Vector2(WORLD_W/2.0f, WORLD_H - wall_thickness / 2.0f), wall_tex_h);
+    Wall leftWall(Vector2(wall_thickness / 2.0f, WORLD_H/2.0f), wall_tex_v);
+    Wall rightWall(Vector2(WORLD_W - wall_thickness / 2.0f, WORLD_H/2.0f), wall_tex_v);
 
         std::vector<IUpdatable*> updatables;
         for (auto* c : characters) updatables.push_back(c);
@@ -359,7 +367,8 @@ int main (int argc, char *argv[]) {
     // cleanup textures we created
         SDL_DestroyTexture(red_texture);
         SDL_DestroyTexture(blue_texture);
-        SDL_DestroyTexture(wall_tex);
+    SDL_DestroyTexture(wall_tex_h);
+    SDL_DestroyTexture(wall_tex_v);
     // cleanup blackholes
     for (auto& bhp : blackholes) if (bhp.first) delete bhp.first;
     blackholes.clear();

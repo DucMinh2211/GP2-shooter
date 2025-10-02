@@ -4,10 +4,18 @@
 #include "inc/Circle.h"
 #include "SDL2/SDL_render.h"
 #include "inc/OBB.h"
+#include "inc/Wall.h"
 #include <iostream>
 
 Bullet::Bullet(Vector2 position, SDL_Texture* sprite, float speed, float damage, Vector2 init_direction, BulletBuffType buffed, int team_id)
-    : Entity(position, sprite, BULLET_SPEED), _team_id(team_id), _damage(damage), _init_direction(init_direction), _buffed(buffed) {}
+    : Entity(position, sprite, BULLET_SPEED), _team_id(team_id), _damage(damage), _init_direction(init_direction), _buffed(buffed), _is_destroyed(false) {}
+
+Bullet::~Bullet() {
+    for (auto* hitbox : _hitbox_list) {
+        delete hitbox;
+    }
+    _hitbox_list.clear();
+}
 
 void Bullet::add_hitbox(HitBox* hitbox) {
     _hitbox_list.push_back(hitbox);
@@ -19,7 +27,7 @@ void Bullet::update_hitboxes() {
     for (auto* hitbox : _hitbox_list) {
         if (auto* obb = dynamic_cast<OBB*>(hitbox)) {
             // center căn giữa sprite 24x24
-            Vector2 center = _position + Vector2(24.0f / 2.0f, 24.0f / 2.0f);
+            Vector2 center = _position; 
             obb->set_transform(center, angle);
         }
     }
@@ -27,7 +35,8 @@ void Bullet::update_hitboxes() {
 
 void Bullet::render(SDL_Renderer* renderer) {
     SDL_Rect srcRect = {4, 0, 20, 24}; // bullet sprite in sheet
-    SDL_Rect bullet_rect = { (int)this->_position.x, (int)this->_position.y, 24, 24 };
+    int w = 24, h = 24;
+    SDL_Rect bullet_rect = { (int)this->_position.x - w/2, (int)this->_position.y - h/2, w, h };
     float angle = std::atan2(this->_init_direction.y, this->_init_direction.x) * 180.0f / PI;
     SDL_RenderCopyEx(renderer, this->_sprite, &srcRect, &bullet_rect, angle, NULL, SDL_FLIP_NONE);
 
@@ -55,19 +64,47 @@ void Bullet::add_force(Vector2 force) {
     _force += force;
 }
 
-void Bullet::collide(ICollidable& object) {
-    // Lặp qua tất cả hitbox của bullet
+void Bullet::collide(ICollidable* object) {
+    if (!object) return;
+
+    // Iterate bullet hitboxes (expecting OBB)
     for (auto* hb1 : this->_hitbox_list) {
-        if (auto* obb1 = dynamic_cast<OBB*>(hb1)) {
-            
-            // Lặp qua tất cả hitbox của object
-            for (auto* hb2 : object.get_hitboxes()) {
-                if (auto* obb2 = dynamic_cast<OBB*>(hb2)) {
-                    // Kiểm tra collision OBB vs OBB
-                    if (obb1->is_collide(*obb2)) {
-                        // Va chạm xảy ra, xử lý logic
-                        std::cout << "Bullet hit an object!" << std::endl;
+        auto* obb1 = dynamic_cast<OBB*>(hb1);
+        if (!obb1) continue;
+
+        for (auto* hb2 : object->get_hitboxes()) {
+            auto* obb2 = dynamic_cast<OBB*>(hb2);
+            if (!obb2) continue;
+
+            if (obb1->is_collide(*obb2)) {
+                // If object is a wall
+                if (typeid(*object) == typeid(Wall)) {
+                    if (isPiercing()) {
+                        // Do nothing (passes through)
+                        return; // no further processing for this wall
+                    } else if (isBouncing()) {
+                        // Reflect initial direction around collision normal approximation
+                        // Approximate normal: pick axis with greater penetration direction
+                        Vector2 diff = _position - ((OBB*)obb2)->get_center();
+                        if (std::abs(diff.x) > std::abs(diff.y)) {
+                            _init_direction.x = -_init_direction.x; // reflect horizontally
+                        } else {
+                            _init_direction.y = - _init_direction.y; // reflect vertically
+                        }
+                        // Normalize and slightly reduce speed to avoid infinite loops (optional)
+                        _init_direction.normalize();
+                        // Update hitbox orientation after bounce
+                        update_hitboxes();
+                        return; // bounce handled
+                    } else {
+                        // Normal bullet: destroy
+                        _is_destroyed = true;
+                        return;
                     }
+                } else {
+                    // Other objects: keep old behavior (destroy)
+                    _is_destroyed = true;
+                    return;
                 }
             }
         }

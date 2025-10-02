@@ -3,7 +3,6 @@
 #include "AnimatedSprite.h"
 #include "math/Vector2.h"
 #include "Obstacle.h"
-#include "Circle.h"
 
 class Explosion : public Obstacle {
 public:
@@ -13,7 +12,7 @@ public:
 
     void update(float dt) override;
     void render(SDL_Renderer* renderer) override;
-    void collide(ICollidable& object) override;
+    void collide(ICollidable* object) override;
 
     bool is_finished() const { return finished; }
 
