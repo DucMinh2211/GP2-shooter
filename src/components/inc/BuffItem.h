@@ -17,7 +17,8 @@ public:
     ~BuffItem();
     std::variant<CharBuffType, BulletBuffType> get_buff_type() { return this->_buff_type; }
     bool is_consumed() const { return _is_consumed; }
+    void consume() { _is_consumed = true; }
     void collide(ICollidable* object) override;
-    void update(float delta_time) override {};
+    void update(float delta_time) override {} // concrete override so vtable exists
     void render(SDL_Renderer* renderer) override;
 };

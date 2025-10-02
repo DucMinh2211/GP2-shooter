@@ -99,6 +99,8 @@ bool OBB::is_collide(OBB& other) {
 bool OBB::is_collide(HitBox& other) {
     if (auto* obb = dynamic_cast<OBB*>(&other))
         return is_collide(*obb);
+    if (auto* circle = dynamic_cast<Circle*>(&other))
+        return is_collide(*circle);
     return false; // future: có thể thêm Circle vs OBB
 }
 

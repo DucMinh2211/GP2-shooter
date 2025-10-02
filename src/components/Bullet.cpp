@@ -1,11 +1,13 @@
 #include "Constant.h"
 #include "inc/Bullet.h"
+#include "inc/Explosion.h"
 #include "inc/Rect.h"
 #include "inc/Circle.h"
 #include "SDL2/SDL_render.h"
 #include "inc/OBB.h"
 #include "inc/Wall.h"
 #include <iostream>
+#include <vector>
 
 Bullet::Bullet(Vector2 position, SDL_Texture* sprite, float speed, float damage, Vector2 init_direction, BulletBuffType buffed, int team_id)
     : Entity(position, sprite, BULLET_SPEED), _team_id(team_id), _damage(damage), _init_direction(init_direction), _buffed(buffed), _is_destroyed(false) {}
@@ -31,6 +33,10 @@ void Bullet::update_hitboxes() {
             obb->set_transform(center, angle);
         }
     }
+}
+
+void Bullet::explode(std::vector<Explosion*>& explosions, SDL_Renderer* renderer) {
+    explosions.push_back(new Explosion(renderer, EXPLOSION_TEXTURE_PATH, this->_position, 50, 50, 9 ,40, 3, 25.0f));
 }
 
 void Bullet::render(SDL_Renderer* renderer) {

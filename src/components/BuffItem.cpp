@@ -46,5 +46,8 @@ void BuffItem::collide(ICollidable* object) {
                 }
             }
         }
+    } else {
+        // Allow double-dispatch for Character consuming buff
+        object->collide(this);
     }
 }
