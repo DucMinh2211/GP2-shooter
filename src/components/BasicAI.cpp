@@ -13,10 +13,6 @@ BasicAI::BasicAI(Character* ai_char, Character* player, std::vector<Bullet*>* bu
 
 void BasicAI::update(float delta_time) {
     if (!_ai_char || !_player) return;
-    // Debug: print positions and delta_time
-    std::cout << "BasicAI update: ai=(" << _ai_char->get_position().x << "," << _ai_char->get_position().y << ")"
-              << " player=(" << _player->get_position().x << "," << _player->get_position().y << ") dt=" << delta_time << "\n";
-    // Move towards player
     Vector2 dir = _player->get_position() - _ai_char->get_position();
     float len2 = dir.x*dir.x + dir.y*dir.y;
     if (len2 > 1.0f) {
@@ -27,13 +23,14 @@ void BasicAI::update(float delta_time) {
         _ai_char->set_direction(Vector2(0,0));
     }
 
-    // Shooting: simple cooldown
+    // Shooting: slower cooldown for PVE AI
     _shoot_timer -= delta_time;
     if (_shoot_timer <= 0.0f) {
         // ask character to shoot (uses ResourceManager to create bullet texture)
         if (_bullets && _rm) {
             _ai_char->shoot(*_bullets, *_rm);
         }
-        _shoot_timer = 1.0f + (std::uniform_real_distribution<float>(0.0f, 1.5f)(_rng));
+        // slower base cooldown (2s) plus some randomness
+        _shoot_timer = 2.0f + (std::uniform_real_distribution<float>(0.0f, 1.5f)(_rng));
     }
 }

@@ -195,6 +195,7 @@ int main (int argc, char *argv[]) {
         AnimatedSprite idle1(renderer, "assets/pictures/tocvangdung.png", 24, 16, 5, 100);
         AnimatedSprite run1(renderer,  "assets/pictures/tocvangchay.png", 24, 16, 5, 100);
         AnimatedSprite shoot1(renderer,"assets/pictures/tocvangban.png", 24, 16, 5, 100);
+    
     // Black hole animation (match tests/test_char.cpp)
     AnimatedSprite blackhole_anim(renderer, "assets/pictures/output.png", 200, 200, 12, 100, 3);
 
@@ -204,10 +205,20 @@ int main (int argc, char *argv[]) {
         Character p3(Vector2(WORLD_W - 100.0f, WORLD_H / 2.0f - 50.0f), blue_texture, 200.0f, 100.0f);
         Character p4(Vector2(WORLD_W - 100.0f, WORLD_H / 2.0f + 50.0f), blue_texture, 200.0f, 100.0f);
 
-        p1.set_animations(&idle, &run, &shoot);
-        p2.set_animations(&idle1, &run1, &shoot1);
-        p3.set_animations(&idle, &run, &shoot);
-        p4.set_animations(&idle1, &run1, &shoot1);
+    p1.set_animations(&idle, &run, &shoot);
+    p2.set_animations(&idle1, &run1, &shoot1);
+    p3.set_animations(&idle, &run, &shoot);
+    p4.set_animations(&idle1, &run1, &shoot1);
+
+    // Assign input sets / teams so bullets and collisions work correctly
+    p1.set_input_set(0);
+    p2.set_input_set(0);
+    p3.set_input_set(1);
+    p4.set_input_set(1);
+
+    // Mark active players for rendering indicator (player team left, AI team right)
+    p1.set_activate(true);
+    p3.set_activate(true);
 
     std::vector<Character*> characters = { &p1, &p2, &p3, &p4 };
 
@@ -262,8 +273,8 @@ int main (int argc, char *argv[]) {
         // blackholes: pair<BlackHole*, spawn_time_ms>
         std::vector<std::pair<BlackHole*, Uint32>> blackholes;
 
-        // Random internal walls: generate 7 walls per stage
-        std::vector<Wall*> random_walls;
+    // Random internal walls: generate 7 walls per stage (PVP)
+    std::vector<Wall*> pvp_random_walls;
         // RNG for random walls and other game elements
         std::random_device rd;
         std::mt19937 rng(rd());
@@ -294,7 +305,7 @@ int main (int argc, char *argv[]) {
                 if (intersects) { attempts++; continue; }
 
                 // check existing random walls
-                for (auto* existing : random_walls) if (existing) {
+                for (auto* existing : pvp_random_walls) if (existing) {
                     for (auto* hb : existing->get_hitboxes()) {
                         if (hb->is_collide(tmp_box)) { intersects = true; break; }
                     }
@@ -326,7 +337,7 @@ int main (int argc, char *argv[]) {
             SDL_Texture* tex = SDL_CreateTextureFromSurface(renderer, surf);
             SDL_FreeSurface(surf);
             Wall* rw = new Wall(chosenPos, tex);
-            random_walls.push_back(rw);
+            pvp_random_walls.push_back(rw);
             updatables.push_back(rw);
         }
 
@@ -402,6 +413,8 @@ int main (int argc, char *argv[]) {
             }
             for (auto* b : bloods) b->update(dt);
             for (auto* s : smokes) s->update(dt);
+
+            // (PVE blackhole logic belongs inside the PVE runner; removed stray block)
 
             // detect damage and deaths: spawn blood on hit, smoke on death, remove dead immediately
             std::vector<Character*> just_died;
@@ -496,7 +509,7 @@ int main (int argc, char *argv[]) {
                 bottomWall.collide(b); if (b->is_destroyed()) continue;
                 leftWall.collide(b); if (b->is_destroyed()) continue;
                 rightWall.collide(b); if (b->is_destroyed()) continue;
-                for (auto* rw : random_walls) if (rw) { rw->collide(b); if (b->is_destroyed()) continue; }
+                for (auto* rw : pvp_random_walls) if (rw) { rw->collide(b); if (b->is_destroyed()) continue; }
                 if (b->is_destroyed()) continue;
 
                 for (auto* c : characters) if (c) { c->collide(b); if (b->is_destroyed()) break; }
@@ -547,7 +560,7 @@ int main (int argc, char *argv[]) {
                 bottomWall.collide(c);
                 leftWall.collide(c);
                 rightWall.collide(c);
-                for (auto* rw : random_walls) if (rw) rw->collide(c);
+                for (auto* rw : pvp_random_walls) if (rw) rw->collide(c);
             }
 
             // Buff spawn logic every 10s
@@ -605,7 +618,7 @@ int main (int argc, char *argv[]) {
                     for (auto* hb : rightWall.get_hitboxes()) if (hb->is_collide(tmp_box)) { intersects = true; break; }
                     if (intersects) continue;
                     // check random internal walls
-                    for (auto* rw : random_walls) if (rw) {
+                    for (auto* rw : pvp_random_walls) if (rw) {
                         for (auto* hb : rw->get_hitboxes()) {
                             if (hb->is_collide(tmp_box)) { intersects = true; break; }
                         }
@@ -734,7 +747,7 @@ int main (int argc, char *argv[]) {
             leftWall.render(renderer);
             rightWall.render(renderer);
             // render random internal walls
-            for (auto* rw : random_walls) if (rw) rw->render(renderer);
+            for (auto* rw : pvp_random_walls) if (rw) rw->render(renderer);
 
             // draw characters
             for (auto* c : characters) {
@@ -752,7 +765,7 @@ int main (int argc, char *argv[]) {
                     for (auto* hb : bullet->get_hitboxes()) hb->debug_draw(renderer, {255, 0, 0, 255});
                 }
                 // wall hitboxes
-                for (auto* rw : random_walls) if (rw) for (auto* hb : rw->get_hitboxes()) hb->debug_draw(renderer, {0,255,0,255});
+                for (auto* rw : pvp_random_walls) if (rw) for (auto* hb : rw->get_hitboxes()) hb->debug_draw(renderer, {0,255,0,255});
                 for (auto* hb : topWall.get_hitboxes()) hb->debug_draw(renderer, {0,255,0,255});
                 for (auto* hb : bottomWall.get_hitboxes()) hb->debug_draw(renderer, {0,255,0,255});
                 for (auto* hb : leftWall.get_hitboxes()) hb->debug_draw(renderer, {0,255,0,255});
@@ -1056,14 +1069,11 @@ int main (int argc, char *argv[]) {
         SDL_DestroyTexture(blue_texture);
     SDL_DestroyTexture(wall_tex_h);
     SDL_DestroyTexture(wall_tex_v);
-    // cleanup random walls
-    for (auto* rw : random_walls) {
-        if (rw) {
-            // destroy the texture inside the wall if accessible via OBB query not available; assume texture freed below
-            delete rw;
-        }
+    // cleanup random walls (PVP)
+    for (auto* rw : pvp_random_walls) {
+        if (rw) delete rw;
     }
-    random_walls.clear();
+    pvp_random_walls.clear();
     // cleanup buffs
     for (auto* bi : buffs) if (bi) delete bi;
     buffs.clear();
@@ -1079,60 +1089,82 @@ int main (int argc, char *argv[]) {
         rm.load_texture("bullet", "assets/pictures/bulletA.png");
         // battlefield background
         rm.load_texture("background", "assets/pictures/background.png");
+        // PVE: preload buff textures so spawned buffs are visible
+        rm.load_texture("health-buff", "assets/pictures/health-buff.png");
+        rm.load_texture("speed-buff", "assets/pictures/speed-buff.png");
+        rm.load_texture("bounce-buff", "assets/pictures/bounce-buff.png");
+        rm.load_texture("explode-buff", "assets/pictures/explosion-buff.png");
+        rm.load_texture("piercing-buff", "assets/pictures/piercing-buff.png");
 
-        // Player
+        // Create four characters (two per team) so PVE mirrors PVP but with AI for the other team
         SDL_Surface* green_surface = SDL_CreateRGBSurface(0, 16, 16, 32,
             0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
         SDL_FillRect(green_surface, NULL, SDL_MapRGBA(green_surface->format, 0, 255, 0, 255));
         SDL_Texture* green_texture = SDL_CreateTextureFromSurface(renderer, green_surface);
         SDL_FreeSurface(green_surface);
 
-        AnimatedSprite idle(renderer, "assets/pictures/PlayerIdle.png", 24, 16, 5, 100);
-        AnimatedSprite run(renderer,  "assets/pictures/PlayerRunning.png", 24, 16, 5, 100);
-        AnimatedSprite shoot(renderer,"assets/pictures/PlayerShooting.png", 24, 16, 5, 100);
-
-        Character player(Vector2(WORLD_W/2.0f, WORLD_H - 120.0f), green_texture, 200.0f, 200.0f);
-        player.set_animations(&idle, &run, &shoot);
-        player.set_activate(true);
-
-        std::vector<Character*> characters = { &player };
-
-        // Create a couple of enemy characters
         SDL_Surface* red_surface = SDL_CreateRGBSurface(0, 16, 16, 32,
             0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
         SDL_FillRect(red_surface, NULL, SDL_MapRGBA(red_surface->format, 255, 0, 0, 255));
         SDL_Texture* red_texture = SDL_CreateTextureFromSurface(renderer, red_surface);
         SDL_FreeSurface(red_surface);
 
-        Character e1(Vector2(200.0f, 100.0f), red_texture, 140.0f, 100.0f);
-        Character e2(Vector2(WORLD_W - 200.0f, 100.0f), red_texture, 140.0f, 100.0f);
-        e1.set_animations(&idle, &run, &shoot);
-        e2.set_animations(&idle, &run, &shoot);
+        AnimatedSprite idle(renderer, "assets/pictures/PlayerIdle.png", 24, 16, 5, 100);
+        AnimatedSprite run(renderer,  "assets/pictures/PlayerRunning.png", 24, 16, 5, 100);
+        AnimatedSprite shoot(renderer,"assets/pictures/PlayerShooting.png", 24, 16, 5, 100);
+        AnimatedSprite idle1(renderer, "assets/pictures/tocvangdung.png", 24, 16, 5, 100);
+        AnimatedSprite run1(renderer,  "assets/pictures/tocvangchay.png", 24, 16, 5, 100);
+        AnimatedSprite shoot1(renderer,"assets/pictures/tocvangban.png", 24, 16, 5, 100);
 
-        std::vector<Character*> enemies = { &e1, &e2 };
+        // 1v1 PVE: one human player (p1) vs one AI (p3)
+        Character p1(Vector2(WORLD_W/2.0f - 160.0f, WORLD_H - 120.0f), green_texture, 200.0f, 200.0f);
+        // make AI slower: lower speed from 140 -> 90; give bot 200 health per request
+        Character p3(Vector2(WORLD_W/2.0f + 160.0f - 40.0f, 120.0f), red_texture, 90.0f, 200.0f);
+
+        p1.set_animations(&idle, &run, &shoot);
+        p3.set_animations(&idle1, &run1, &shoot1);
+
+    std::vector<Character*> characters = { &p1, &p3 };
+
+    // Fixed slot mapping for HUD stability in PVE (1v1)
+    std::unordered_map<Character*, int> pve_slot_index;
+    pve_slot_index[&p1] = 0;
+    pve_slot_index[&p3] = 1;
 
     std::vector<Bullet*> bullets;
+    // PVE: local random walls container (pve_random_walls)
+    std::vector<Wall*> pve_random_walls;
+    // PVE blackholes container is declared later as pve_blackholes_local
     std::vector<Explosion*> explosions;
     std::vector<BloodSplash*> bloods;
     std::vector<Smoke*> smokes;
+    // Buff items for PVE
+    std::vector<BuffItem*> buffs;
+    const Uint32 buff_interval_ms_pve = 10000; // spawn every 10s in PVE
+    // force a first immediate spawn
+    Uint32 last_buff_spawn_pve = SDL_GetTicks() - buff_interval_ms_pve;
     // previous health tracking for death detection
     std::unordered_map<Character*, float> prev_health;
     for (auto c : characters) if (c) prev_health[c] = c->get_health();
 
-    // BasicAI controllers
-    BasicAI ai1(&e1, &player, &bullets, &rm);
-    BasicAI ai2(&e2, &player, &bullets, &rm);
+    // Ensure distinct teams/input sets so bullets are treated as enemies
+    p1.set_input_set((int)InputSet::INPUT_1);
+    p1.set_activate(true);
+    p3.set_input_set((int)InputSet::INPUT_2);
+    p3.set_activate(false);
 
-    // Input handler for the human player (player uses INPUT_1)
-    InputHandler ih_player(InputSet::INPUT_1, &player, nullptr);
+    // BasicAI controller will control the enemy (p3), human controls p1
+    BasicAI ai1(&p3, &p1, &bullets, &rm); // ai targets player
 
-    // Simple updatables list
+    // Input handler for the human player controlling p1 only
+    InputHandler ih_player(InputSet::INPUT_1, &p1, nullptr);
+
+    // Simple updatables list (player, enemy, input handler, AI)
     std::vector<IUpdatable*> updatables;
-    updatables.push_back(&player);
+    updatables.push_back(&p1);
+    updatables.push_back(&p3);
     updatables.push_back(&ih_player);
-    // AI controllers are also updatables
     updatables.push_back(&ai1);
-    updatables.push_back(&ai2);
 
         // Gun-change timer for PVE: rotate guns every 30s
         const Uint32 gun_change_ms = 30000;
@@ -1153,12 +1185,128 @@ int main (int argc, char *argv[]) {
         Wall leftWall(Vector2(wall_thickness / 2.0f, WORLD_H/2.0f), wall_tex_v);
         Wall rightWall(Vector2(WORLD_W - wall_thickness / 2.0f, WORLD_H/2.0f), wall_tex_v);
 
+    // RNG and random internal walls for PVE (mirror PVP behavior)
+    std::random_device rd_pve;
+    std::mt19937 rng_pve(rd_pve());
+    std::uniform_real_distribution<float> wallX_pve(150.0f, WORLD_W - 150.0f);
+    std::uniform_real_distribution<float> wallY_pve(150.0f, WORLD_H - 150.0f);
+    std::uniform_int_distribution<int> wallW_pve(64, 240);
+    std::uniform_int_distribution<int> wallH_pve(16, 96);
+    for (int i = 0; i < 7; ++i) {
+        int w = wallW_pve(rng_pve);
+        int h = wallH_pve(rng_pve);
+        bool placed = false;
+        int attempts = 0;
+        Vector2 chosenPos;
+        while (!placed && attempts < 30) {
+            Vector2 pos(wallX_pve(rng_pve), wallY_pve(rng_pve));
+            OBB tmp_box(pos, Vector2(w / 2.0f, h / 2.0f), 0.0f);
+            bool intersects = false;
+            for (auto* hb : topWall.get_hitboxes()) if (hb->is_collide(tmp_box)) { intersects = true; break; }
+            if (intersects) { attempts++; continue; }
+            for (auto* hb : bottomWall.get_hitboxes()) if (hb->is_collide(tmp_box)) { intersects = true; break; }
+            if (intersects) { attempts++; continue; }
+            for (auto* hb : leftWall.get_hitboxes()) if (hb->is_collide(tmp_box)) { intersects = true; break; }
+            if (intersects) { attempts++; continue; }
+            for (auto* hb : rightWall.get_hitboxes()) if (hb->is_collide(tmp_box)) { intersects = true; break; }
+            if (intersects) { attempts++; continue; }
+            for (auto* existing : pve_random_walls) if (existing) {
+                for (auto* hb : existing->get_hitboxes()) {
+                    if (hb->is_collide(tmp_box)) { intersects = true; break; }
+                }
+                if (intersects) break;
+            }
+            if (!intersects) {
+                const float min_player_clearance = 150.0f;
+                for (auto* pc : characters) if (pc) {
+                    float dx = pc->get_position().x - pos.x;
+                    float dy = pc->get_position().y - pos.y;
+                    if (dx*dx + dy*dy < min_player_clearance * min_player_clearance) { intersects = true; break; }
+                }
+            }
+            if (!intersects) { placed = true; chosenPos = pos; } else attempts++;
+        }
+        if (!placed) continue;
+        SDL_Surface* surf = SDL_CreateRGBSurface(0, w, h, 32, 0x00FF0000,0x0000FF00,0x000000FF,0xFF000000);
+        SDL_FillRect(surf, NULL, SDL_MapRGBA(surf->format, 100, 100, 100, 255));
+        SDL_Texture* tex = SDL_CreateTextureFromSurface(renderer, surf);
+        SDL_FreeSurface(surf);
+        Wall* rw = new Wall(chosenPos, tex);
+        pve_random_walls.push_back(rw);
+        updatables.push_back(rw);
+    }
+
     // game loop simple
     SDL_RenderSetLogicalSize(renderer, WORLD_W, WORLD_H);
     bool in_game = true;
     Uint32 last = SDL_GetTicks();
     struct Notify { std::string text; Uint32 expiry; };
     std::vector<Notify> notifications;
+    // pve_result: 1 = player win, -1 = player lose, 0 = none
+    int pve_result = 0;
+    // Blackhole RNG + timing for PVE
+    std::random_device pve_rd_bh;
+    std::mt19937 pve_rng_bh(pve_rd_bh());
+    std::uniform_real_distribution<float> pve_distX(100.0f, WORLD_W - 100.0f);
+    std::uniform_real_distribution<float> pve_distY(100.0f, WORLD_H - 100.0f);
+    const Uint32 pve_blackhole_precaution_ms = 5000;
+    const Uint32 pve_blackhole_interval_ms = 30000;
+    const Uint32 pve_blackhole_life_ms = 15000;
+    Uint32 pve_start_time = SDL_GetTicks();
+    Uint32 pve_last_bh_spawn = 0;
+    // PVE blackholes container
+    std::vector<std::pair<BlackHole*, Uint32>> pve_blackholes_local;
+    // Generate random internal walls for PVE (similar to PVP)
+    {
+        std::random_device rdp;
+        std::mt19937 rngp(rdp());
+        std::uniform_real_distribution<float> wallXp(150.0f, WORLD_W - 150.0f);
+        std::uniform_real_distribution<float> wallYp(150.0f, WORLD_H - 150.0f);
+        std::uniform_int_distribution<int> wallWp(64, 240);
+        std::uniform_int_distribution<int> wallHp(16, 96);
+        for (int i = 0; i < 7; ++i) {
+            int w = wallWp(rngp);
+            int h = wallHp(rngp);
+            bool placed = false;
+            int attempts = 0;
+            Vector2 chosenPos;
+            while (!placed && attempts < 30) {
+                Vector2 pos(wallXp(rngp), wallYp(rngp));
+                OBB tmp_box(pos, Vector2(w / 2.0f, h / 2.0f), 0.0f);
+                bool intersects = false;
+                for (auto* hb : topWall.get_hitboxes()) if (hb->is_collide(tmp_box)) { intersects = true; break; }
+                if (intersects) { attempts++; continue; }
+                for (auto* hb : bottomWall.get_hitboxes()) if (hb->is_collide(tmp_box)) { intersects = true; break; }
+                if (intersects) { attempts++; continue; }
+                for (auto* hb : leftWall.get_hitboxes()) if (hb->is_collide(tmp_box)) { intersects = true; break; }
+                if (intersects) { attempts++; continue; }
+                for (auto* hb : rightWall.get_hitboxes()) if (hb->is_collide(tmp_box)) { intersects = true; break; }
+                if (intersects) { attempts++; continue; }
+                for (auto* existing : pve_random_walls) if (existing) {
+                    for (auto* hb : existing->get_hitboxes()) { if (hb->is_collide(tmp_box)) { intersects = true; break; } }
+                    if (intersects) break;
+                }
+                if (!intersects) {
+                    const float min_player_clearance = 150.0f;
+                    for (auto* pc : characters) if (pc) {
+                        float dx = pc->get_position().x - pos.x;
+                        float dy = pc->get_position().y - pos.y;
+                        if (dx*dx + dy*dy < min_player_clearance * min_player_clearance) { intersects = true; break; }
+                    }
+                }
+                if (!intersects) { placed = true; chosenPos = pos; } else attempts++;
+            }
+            if (!placed) continue;
+            SDL_Surface* surf = SDL_CreateRGBSurface(0, w, h, 32, 0x00FF0000,0x0000FF00,0x000000FF,0xFF000000);
+            SDL_FillRect(surf, NULL, SDL_MapRGBA(surf->format, 100, 100, 100, 255));
+            SDL_Texture* tex = SDL_CreateTextureFromSurface(renderer, surf);
+            SDL_FreeSurface(surf);
+            Wall* rw = new Wall(chosenPos, tex);
+            pve_random_walls.push_back(rw);
+            updatables.push_back(rw);
+        }
+    }
+    AnimatedSprite pve_blackhole_anim(renderer, "assets/pictures/output.png", 200, 200, 12, 100, 3);
         while (in_game) {
             SDL_Event e;
             while (SDL_PollEvent(&e)) {
@@ -1177,6 +1325,9 @@ int main (int argc, char *argv[]) {
 
             // update
             for (auto* u : updatables) u->update(dt);
+            for (auto& bhp : pve_blackholes_local) if (bhp.first) bhp.first->update(dt);
+            // Update PVE blackholes (local container)
+            for (auto& bhp : pve_blackholes_local) if (bhp.first) bhp.first->update(dt);
             for (auto* b : bullets) b->update(dt);
             for (auto* ex : explosions) ex->update(dt);
             // Explosion collisions in PVE: characters/bullets
@@ -1187,24 +1338,162 @@ int main (int argc, char *argv[]) {
             for (auto* b : bloods) b->update(dt);
             for (auto* s : smokes) s->update(dt);
 
-            // Rotate guns every gun_change_ms in PVE
+            // Rotate guns every gun_change_ms in PVE (toggle all characters, same as PVP)
             if (SDL_GetTicks() - last_gun_change >= gun_change_ms) {
                 last_gun_change = SDL_GetTicks();
-                // rotate player
-                GunType cur = player.get_gun_type();
-                GunType next = GunType::PISTOL;
-                if (cur == GunType::PISTOL) next = GunType::AK;
-                else next = GunType::PISTOL;
-                player.set_gun_type(next);
-                // rotate enemies
-                for (auto* en : enemies) if (en) {
-                    GunType ecur = en->get_gun_type();
-                    GunType enext = GunType::PISTOL;
-                    if (ecur == GunType::PISTOL) enext = GunType::AK;
-                    else enext = GunType::PISTOL;
-                    en->set_gun_type(enext);
+                for (auto* c : characters) {
+                    if (!c) continue;
+                    GunType cur = c->get_gun_type();
+                    GunType next = GunType::PISTOL;
+                    if (cur == GunType::PISTOL) next = GunType::AK;
+                    else next = GunType::PISTOL;
+                    c->set_gun_type(next);
                 }
                 notifications.push_back({ std::string("Guns switched!"), SDL_GetTicks() + 2500 });
+            }
+
+            // Buff spawn logic for PVE (every buff_interval_ms_pve)
+            if (SDL_GetTicks() - last_buff_spawn_pve >= buff_interval_ms_pve) {
+                // pick a random buff type (char buff or bullet buff) - reuse simple selection
+                std::variant<CharBuffType, BulletBuffType> bt;
+                // check if any player currently has a bullet buff
+                bool any_bullet_buff = false;
+                for (auto* c : characters) if (c) if (c->get_gun_buff_type() != BulletBuffType::NONE) { any_bullet_buff = true; break; }
+                std::uniform_int_distribution<int> chooseType(0, 1);
+                int kind = chooseType(rng_pve);
+                if (kind == 0) {
+                    std::uniform_int_distribution<int> chooseChar(0, (int)CharBuffType::NUM - 1);
+                    bt = static_cast<CharBuffType>(chooseChar(rng_pve));
+                } else {
+                    if (any_bullet_buff) {
+                        std::uniform_int_distribution<int> chooseChar(0, (int)CharBuffType::NUM - 1);
+                        bt = static_cast<CharBuffType>(chooseChar(rng_pve));
+                    } else {
+                        std::vector<BulletBuffType> bulletTypes = { BulletBuffType::BOUNCING, BulletBuffType::EXPLODING, BulletBuffType::PIERCING };
+                        std::uniform_int_distribution<int> chooseBullet(0, (int)bulletTypes.size() - 1);
+                        bt = bulletTypes[chooseBullet(rng_pve)];
+                    }
+                }
+                // pick a spawn position avoiding walls and players
+                Vector2 pos;
+                bool placed = false;
+                for (int attempt = 0; attempt < 30 && !placed; ++attempt) {
+                    pos = Vector2(wallX_pve(rng_pve), wallY_pve(rng_pve));
+                    OBB tmp_box(pos, Vector2(16.0f, 16.0f), 0.0f);
+                    bool intersects = false;
+                    for (auto* hb : topWall.get_hitboxes()) if (hb->is_collide(tmp_box)) { intersects = true; break; }
+                    if (intersects) continue;
+                    for (auto* hb : bottomWall.get_hitboxes()) if (hb->is_collide(tmp_box)) { intersects = true; break; }
+                    if (intersects) continue;
+                    for (auto* hb : leftWall.get_hitboxes()) if (hb->is_collide(tmp_box)) { intersects = true; break; }
+                    if (intersects) continue;
+                    for (auto* hb : rightWall.get_hitboxes()) if (hb->is_collide(tmp_box)) { intersects = true; break; }
+                    if (intersects) continue;
+                    for (auto* rw : pve_random_walls) if (rw) {
+                        for (auto* hb : rw->get_hitboxes()) if (hb->is_collide(tmp_box)) { intersects = true; break; }
+                        if (intersects) break;
+                    }
+                    if (intersects) continue;
+                    // avoid players
+                    const float min_clear = 120.0f;
+                    for (auto* pc : characters) if (pc) {
+                        float dx = pc->get_position().x - pos.x;
+                        float dy = pc->get_position().y - pos.y;
+                        if (dx*dx + dy*dy < min_clear * min_clear) { intersects = true; break; }
+                    }
+                    if (!intersects) placed = true;
+                }
+                if (placed) {
+                    SDL_Texture* chosen_tex = nullptr;
+                    if (std::holds_alternative<CharBuffType>(bt)) {
+                        CharBuffType cb = std::get<CharBuffType>(bt);
+                        switch (cb) {
+                            case CharBuffType::HEALTH: chosen_tex = rm.get_texture("health-buff"); break;
+                            case CharBuffType::SPEED: chosen_tex = rm.get_texture("speed-buff"); break;
+                            default: chosen_tex = rm.get_texture("health-buff"); break;
+                        }
+                    } else {
+                        BulletBuffType bb = std::get<BulletBuffType>(bt);
+                        switch (bb) {
+                            case BulletBuffType::BOUNCING: chosen_tex = rm.get_texture("bounce-buff"); break;
+                            case BulletBuffType::EXPLODING: chosen_tex = rm.get_texture("explode-buff"); break;
+                            case BulletBuffType::PIERCING: chosen_tex = rm.get_texture("piercing-buff"); break;
+                            default: chosen_tex = nullptr; break;
+                        }
+                    }
+                    SDL_Texture* btex = chosen_tex;
+                    if (!btex) {
+                        SDL_Surface* bs = SDL_CreateRGBSurface(0, 32, 32, 32, 0x00FF0000,0x0000FF00,0x000000FF,0xFF000000);
+                        SDL_FillRect(bs, NULL, SDL_MapRGBA(bs->format, 200, 100, 0, 255));
+                        btex = SDL_CreateTextureFromSurface(renderer, bs);
+                        SDL_FreeSurface(bs);
+                    }
+                    BuffItem* bi = new BuffItem(pos, btex, bt);
+                    buffs.push_back(bi);
+                    updatables.push_back(bi);
+                }
+                last_buff_spawn_pve = SDL_GetTicks();
+            }
+
+            // PVE Blackhole spawn & lifetime logic (mirrors PVP)
+            
+            Uint32 now_pve_bh = SDL_GetTicks();
+            if (now_pve_bh - pve_start_time >= pve_blackhole_precaution_ms) {
+                if (pve_last_bh_spawn == 0 || now_pve_bh - pve_last_bh_spawn >= pve_blackhole_interval_ms) {
+                    bool ok = false; int attempts = 0; Vector2 p;
+                    while (!ok && attempts < 20) {
+                        p.x = pve_distX(pve_rng_bh);
+                        p.y = pve_distY(pve_rng_bh);
+                        ok = true;
+                        for (auto* c : characters) {
+                            float dx = c->get_position().x - p.x;
+                            float dy = c->get_position().y - p.y;
+                            if (dx*dx + dy*dy < 200.0f * 200.0f) { ok = false; break; }
+                        }
+                        attempts++;
+                    }
+                    if (ok) {
+                        BlackHole* nb = new BlackHole(p, nullptr, 65.0f, 30.0f, 5.0f, 15.0f);
+                        
+                        nb->set_animation(&pve_blackhole_anim);
+                        pve_blackholes_local.emplace_back(nb, now_pve_bh);
+                    }
+                    pve_last_bh_spawn = now_pve_bh;
+                }
+            }
+
+            // Remove expired PVE blackholes
+            for (auto& bhp : pve_blackholes_local) {
+                if (bhp.first && now_pve_bh - bhp.second >= pve_blackhole_life_ms) {
+                    delete bhp.first;
+                    bhp.first = nullptr;
+                }
+            }
+            pve_blackholes_local.erase(std::remove_if(pve_blackholes_local.begin(), pve_blackholes_local.end(), [](const std::pair<BlackHole*,Uint32>& p){ return p.first == nullptr; }), pve_blackholes_local.end());
+
+            // let characters pick up buffs
+            for (auto* c : characters) if (c) for (auto* bi : buffs) if (bi) c->collide(bi);
+            // remove consumed buffs
+            {
+                auto it = buffs.begin();
+                while (it != buffs.end()) {
+                    BuffItem* bi = *it;
+                    if (bi->is_consumed()) {
+                        // If the consumed buff was a BulletBuff, clear bullet buffs from other characters
+                        auto btype = bi->get_buff_type();
+                        if (std::holds_alternative<BulletBuffType>(btype)) {
+                            BulletBuffType taken = std::get<BulletBuffType>(btype);
+                            for (auto* c : characters) if (c) {
+                                if (c->get_gun_buff_type() != BulletBuffType::NONE && c->get_gun_buff_type() != taken) {
+                                    c->clear_bullet_buff();
+                                }
+                            }
+                        }
+                        updatables.erase(std::remove(updatables.begin(), updatables.end(), static_cast<IUpdatable*>(bi)), updatables.end());
+                        delete bi;
+                        it = buffs.erase(it);
+                    } else ++it;
+                }
             }
 
             // detect damage and deaths in PVE: spawn blood on hit, smoke on death, remove dead
@@ -1229,11 +1518,22 @@ int main (int argc, char *argv[]) {
                 prev_health[c] = new_h;
             }
             if (!pve_just_died.empty()) {
+                bool ai_died = false;
                 for (auto d : pve_just_died) {
+                    if (d == &p3) ai_died = true;
                     characters.erase(std::remove(characters.begin(), characters.end(), d), characters.end());
                     updatables.erase(std::remove(updatables.begin(), updatables.end(), static_cast<IUpdatable*>(d)), updatables.end());
                     prev_health.erase(d);
                 }
+                // End the PVE match when any character dies. Notify the player of win/lose.
+                if (ai_died) {
+                    notifications.push_back({ std::string("You win"), SDL_GetTicks() + 3000 });
+                    pve_result = 1;
+                } else {
+                    notifications.push_back({ std::string("You lose"), SDL_GetTicks() + 3000 });
+                    pve_result = -1;
+                }
+                in_game = false;
             }
 
             // cleanup finished explosions
@@ -1243,11 +1543,21 @@ int main (int argc, char *argv[]) {
             // cleanup finished smokes
             smokes.erase(std::remove_if(smokes.begin(), smokes.end(), [](Smoke* s){ if (s->is_finished()) { delete s; return true; } return false; }), smokes.end());
 
-            // collisions: bullets vs characters/walls
+            // collisions: bullets vs blackholes/characters/walls
             for (auto* b : bullets) {
-                player.collide(b);
-                topWall.collide(b); bottomWall.collide(b); leftWall.collide(b); rightWall.collide(b);
-                for (auto* en : enemies) en->collide(b);
+                if (!b) continue;
+                // blackholes first
+                for (auto& bhp : pve_blackholes_local) if (bhp.first) bhp.first->collide(b);
+                // PVE blackholes collide with bullets
+                for (auto& bhp : pve_blackholes_local) if (bhp.first) bhp.first->collide(b);
+                if (b->is_destroyed()) continue;
+                // Characters absorb bullet collisions
+                for (auto* ch : characters) if (ch) ch->collide(b);
+                topWall.collide(b); if (b->is_destroyed()) continue;
+                bottomWall.collide(b); if (b->is_destroyed()) continue;
+                leftWall.collide(b); if (b->is_destroyed()) continue;
+                rightWall.collide(b); if (b->is_destroyed()) continue;
+                for (auto* rw : pve_random_walls) if (rw) { rw->collide(b); if (b->is_destroyed()) break; }
             }
             // bullet vs bullet collisions in PVE: bullets from different teams (if any) destroy each other
             for (size_t i = 0; i < bullets.size(); ++i) {
@@ -1271,18 +1581,29 @@ int main (int argc, char *argv[]) {
                 }
             }
             // remove destroyed bullets
-            bullets.erase(std::remove_if(bullets.begin(), bullets.end(), [](Bullet* bullet){ if (bullet->is_destroyed()) { delete bullet; return true; } return false; }), bullets.end());
+            bullets.erase(std::remove_if(bullets.begin(), bullets.end(), [&](Bullet* bullet){
+                if (!bullet) return true;
+                if (bullet->is_destroyed()) {
+                    if (bullet->getBuff() == BulletBuffType::EXPLODING) {
+                        bullet->explode(explosions, renderer);
+                    }
+                    delete bullet;
+                    return true;
+                }
+                return false;
+            }), bullets.end());
 
-            // Ensure player and enemies collide with walls so they can't pass through
-            topWall.collide(&player);
-            bottomWall.collide(&player);
-            leftWall.collide(&player);
-            rightWall.collide(&player);
-            for (auto* en : enemies) {
-                topWall.collide(en);
-                bottomWall.collide(en);
-                leftWall.collide(en);
-                rightWall.collide(en);
+            // Ensure characters collide with boundary walls, blackholes and random internal walls so they cannot pass through
+            for (auto* c : characters) {
+                if (!c) continue;
+                topWall.collide(c);
+                bottomWall.collide(c);
+                leftWall.collide(c);
+                rightWall.collide(c);
+                for (auto& bhp : pve_blackholes_local) if (bhp.first) bhp.first->collide(c);
+                // PVE blackholes collide with characters
+                for (auto& bhp : pve_blackholes_local) if (bhp.first) bhp.first->collide(c);
+                for (auto* rw : pve_random_walls) if (rw) rw->collide(c);
             }
 
             // render
@@ -1298,11 +1619,15 @@ int main (int argc, char *argv[]) {
             SDL_SetRenderDrawColor(renderer, 0xFF, 0x00, 0x00, 0xFF);
             SDL_RenderDrawRect(renderer, &worldRect);
             topWall.render(renderer); bottomWall.render(renderer); leftWall.render(renderer); rightWall.render(renderer);
-            player.render(renderer);
-            for (auto* en : enemies) en->render(renderer);
+            for (auto* rw : pve_random_walls) if (rw) rw->render(renderer);
+            for (auto* ch : characters) if (ch) ch->render(renderer);
             for (auto* b : bullets) b->render(renderer);
+            for (auto* ex : explosions) { ex->render(renderer); }
+            for (auto* bi : buffs) if (bi) bi->render(renderer);
             for (auto* bl : bloods) bl->render(renderer);
             for (auto* s : smokes) s->render(renderer);
+            for (auto& bhp : pve_blackholes_local) if (bhp.first) bhp.first->render(renderer);
+            for (auto& bhp : pve_blackholes_local) if (bhp.first) bhp.first->render(renderer);
             // simple HUD for PVE: show player health + bullet buff icon
             if (font) {
                 SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
@@ -1325,45 +1650,170 @@ int main (int argc, char *argv[]) {
                     notifY += lineH;
                     ++it;
                 }
-                // compact panel for PVE
-                const int pvex = 8, pvey = 8;
-                const int pveW = 220, pveH = 48;
-                SDL_Rect panel = { pvex, pvey, pveW, pveH };
+                // use the same split HUD as PVP for PVE so both modes match visually
+
+                int players = (int)characters.size();
+                int left_count = (players + 1) / 2;
+                int right_count = players - left_count;
+                const int panelW = 270; // smaller panel width
+                const int entryH = 56;  // reduced entry height
+                const int panelY = 8;
+
+                // left panel background
+                int panelHLeft = 16 + left_count * entryH;
+                int panelLeftX = 8;
+                SDL_Rect panelLeftBg = { panelLeftX - 6, panelY - 6, panelW, panelHLeft };
                 SDL_SetRenderDrawColor(renderer, 0, 0, 0, 160);
-                SDL_RenderFillRect(renderer, &panel);
+                SDL_RenderFillRect(renderer, &panelLeftBg);
 
-                // player name and compact health bar
-                std::string name = "Player";
-                SDL_Color textColor = { 230, 230, 230, 255 };
-                int textH = 0;
-                SDL_Surface* ts = TTF_RenderText_Blended(font, name.c_str(), textColor);
-                if (ts) {
-                    textH = ts->h;
-                    SDL_Texture* ttex = SDL_CreateTextureFromSurface(renderer, ts);
-                    SDL_Rect dst = { pvex + 8, pvey + 4, ts->w, textH };
-                    SDL_FreeSurface(ts);
-                    if (ttex) { SDL_RenderCopy(renderer, ttex, NULL, &dst); SDL_DestroyTexture(ttex); }
-                }
-                float hp = std::max(0.0f, player.get_health());
-                float hpfrac = std::min(1.0f, hp / 100.0f);
-                int hbY = pvey + textH + 8; // position below name
-                SDL_Rect hbBg = { pvex + 8, hbY, 140, 10 };
-                SDL_SetRenderDrawColor(renderer, 60, 60, 60, 200); SDL_RenderFillRect(renderer, &hbBg);
-                SDL_Rect hbFg = { pvex + 8, hbY, (int)(140 * hpfrac), 10 };
-                SDL_SetRenderDrawColor(renderer, (Uint8)(200 * (1.0f - hpfrac)), (Uint8)(200 * hpfrac), 50, 255); SDL_RenderFillRect(renderer, &hbFg);
+                // right panel background
+                int panelHRight = 16 + right_count * entryH;
+                int panelRightX = WORLD_W - panelW - 8;
+                SDL_Rect panelRightBg = { panelRightX - 6, panelY - 6, panelW, panelHRight };
+                SDL_SetRenderDrawColor(renderer, 0, 0, 0, 160);
+                SDL_RenderFillRect(renderer, &panelRightBg);
 
-                // bullet buff icon (aligned to health bar)
-                SDL_Texture* btex = nullptr;
-                BulletBuffType bb = player.get_active_bullet_buff();
-                switch (bb) {
-                    case BulletBuffType::BOUNCING: btex = rm.get_texture("bounce-buff"); break;
-                    case BulletBuffType::EXPLODING: btex = rm.get_texture("explode-buff"); break;
-                    case BulletBuffType::PIERCING: btex = rm.get_texture("piercing-buff"); break;
-                    default: break;
+                // helper: ellipsize to pixel width
+                auto ellipsize = [&](const std::string &full, int maxW) {
+                    std::string s = full;
+                    int w = 0, h = 0;
+                    if (TTF_SizeText(font, s.c_str(), &w, &h) == 0 && w <= maxW) return s;
+                    while (!s.empty()) {
+                        s = s.substr(0, s.size() - 1);
+                        std::string t = s + "...";
+                        if (TTF_SizeText(font, t.c_str(), &w, &h) == 0 && w <= maxW) return t;
+                    }
+                    return std::string("...");
+                };
+
+                // left column entries
+                for (int idx = 0; idx < left_count; ++idx) {
+                    int i = idx;
+                    Character* ch = characters[i];
+                    if (!ch) continue;
+                    int x = panelLeftX;
+                    int y = panelY + idx * entryH;
+
+                    SDL_Rect entryBg = { x + 8, y + 8, panelW - 16, entryH - 16 };
+                    SDL_SetRenderDrawColor(renderer, 24, 24, 24, 200);
+                    SDL_RenderFillRect(renderer, &entryBg);
+
+                    SDL_Rect sw = { x + 12, y + 12, 18, 18 };
+                    if (i < 2) SDL_SetRenderDrawColor(renderer, 200, 60, 60, 255); else SDL_SetRenderDrawColor(renderer, 80, 120, 220, 255);
+                    SDL_RenderFillRect(renderer, &sw);
+
+                    std::string basename = (i==0?"player1_1":(i==1?"player1_2":(i==2?"player2_1":(i==3?"player2_2":"player"+std::to_string(i+1)))));
+                    GunType gt = ch->get_gun_type();
+                    std::string fullName = basename + (gt == GunType::AK ? " AK" : " PIS");
+                    int maxTextW = panelW - 28 - 48;
+                    std::string nameToRender = ellipsize(fullName, maxTextW);
+                    SDL_Color textColor = { 230, 230, 230, 255 };
+                    int textH = 0;
+                    SDL_Surface* textSurf = TTF_RenderText_Blended(font, nameToRender.c_str(), textColor);
+                    if (textSurf) {
+                        textH = textSurf->h;
+                        SDL_Texture* textTex = SDL_CreateTextureFromSurface(renderer, textSurf);
+                        SDL_Rect dst = { x + 28, y + 10, textSurf->w, textH };
+                        SDL_FreeSurface(textSurf);
+                        if (textTex) { SDL_RenderCopy(renderer, textTex, NULL, &dst); SDL_DestroyTexture(textTex); }
+                    }
+
+                    float hp = std::max(0.0f, ch->get_health());
+                    float hpfrac = std::min(1.0f, hp / 100.0f);
+                    int hbW = 150;
+                    int hbH = 12;
+                    int hbY = y + 12 + textH + 8;
+                    SDL_Rect hbBg = { x + 36, hbY, hbW, hbH };
+                    SDL_SetRenderDrawColor(renderer, 60, 60, 60, 200); SDL_RenderFillRect(renderer, &hbBg);
+                    SDL_Rect hbFg = { x + 36, hbY, (int)(hbW * hpfrac), hbH };
+                    SDL_SetRenderDrawColor(renderer, (Uint8)(200 * (1.0f - hpfrac)), (Uint8)(200 * hpfrac), 50, 255); SDL_RenderFillRect(renderer, &hbFg);
+
+                    int ix = x + panelW - 28;
+                    int iconY = y + 10;
+                    auto cbs = ch->get_active_char_buffs();
+                    for (auto cb : cbs) {
+                        SDL_Texture* cbtex = nullptr;
+                        switch (cb) {
+                            case CharBuffType::HEALTH: cbtex = rm.get_texture("health-buff"); break;
+                            case CharBuffType::SPEED: cbtex = rm.get_texture("speed-buff"); break;
+                            default: break;
+                        }
+                        if (cbtex) { SDL_Rect cbdst = { ix - 20 + 1, iconY, 20, 20 }; SDL_RenderCopy(renderer, cbtex, NULL, &cbdst); ix -= 20 + 6; }
+                    }
+                    BulletBuffType bb = ch->get_active_bullet_buff();
+                    SDL_Texture* btex = nullptr;
+                    switch (bb) {
+                        case BulletBuffType::BOUNCING: btex = rm.get_texture("bounce-buff"); break;
+                        case BulletBuffType::EXPLODING: btex = rm.get_texture("explode-buff"); break;
+                        case BulletBuffType::PIERCING: btex = rm.get_texture("piercing-buff"); break;
+                        default: break;
+                    }
+                    if (btex) { SDL_Rect bdst = { ix - 20 + 1, iconY, 20, 20 }; SDL_RenderCopy(renderer, btex, NULL, &bdst); ix -= 20 + 6; }
                 }
-                if (btex) {
-                    SDL_Rect bdst = { pvex + 8 + 140 + 8, hbY - 6, 28, 28 };
-                    SDL_RenderCopy(renderer, btex, NULL, &bdst);
+
+                // right column entries
+                for (int ridx = 0; ridx < right_count; ++ridx) {
+                    int i = left_count + ridx;
+                    Character* ch = characters[i];
+                    if (!ch) continue;
+                    int x = panelRightX;
+                    int y = panelY + ridx * entryH;
+
+                    SDL_Rect entryBg = { x + 8, y + 8, panelW - 16, entryH - 16 };
+                    SDL_SetRenderDrawColor(renderer, 24, 24, 24, 200);
+                    SDL_RenderFillRect(renderer, &entryBg);
+
+                    SDL_Rect sw = { x + 12, y + 12, 18, 18 };
+                    if (i < 2) SDL_SetRenderDrawColor(renderer, 200, 60, 60, 255); else SDL_SetRenderDrawColor(renderer, 80, 120, 220, 255);
+                    SDL_RenderFillRect(renderer, &sw);
+
+                    std::string basename = (i==0?"player1_1":(i==1?"player1_2":(i==2?"player2_1":(i==3?"player2_2":"player"+std::to_string(i+1)))));
+                    GunType gt = ch->get_gun_type();
+                    std::string fullName = basename + (gt == GunType::AK ? " AK" : " PIS");
+                    int maxTextW = panelW - 28 - 48;
+                    std::string nameToRender = ellipsize(fullName, maxTextW);
+                    SDL_Color textColor = { 230, 230, 230, 255 };
+                    int textH = 0;
+                    SDL_Surface* textSurf = TTF_RenderText_Blended(font, nameToRender.c_str(), textColor);
+                    if (textSurf) {
+                        textH = textSurf->h;
+                        SDL_Texture* textTex = SDL_CreateTextureFromSurface(renderer, textSurf);
+                        SDL_Rect dst = { x + 28, y + 10, textSurf->w, textH };
+                        SDL_FreeSurface(textSurf);
+                        if (textTex) { SDL_RenderCopy(renderer, textTex, NULL, &dst); SDL_DestroyTexture(textTex); }
+                    }
+
+                    float hp = std::max(0.0f, ch->get_health());
+                    float hpfrac = std::min(1.0f, hp / 100.0f);
+                    int hbW = 150;
+                    int hbH = 12;
+                    int hbY = y + 12 + textH + 8;
+                    SDL_Rect hbBg = { x + 36, hbY, hbW, hbH };
+                    SDL_SetRenderDrawColor(renderer, 60, 60, 60, 200); SDL_RenderFillRect(renderer, &hbBg);
+                    SDL_Rect hbFg = { x + 36, hbY, (int)(hbW * hpfrac), hbH };
+                    SDL_SetRenderDrawColor(renderer, (Uint8)(200 * (1.0f - hpfrac)), (Uint8)(200 * hpfrac), 50, 255); SDL_RenderFillRect(renderer, &hbFg);
+
+                    int ix = x + panelW - 28;
+                    int iconY = y + 10;
+                    auto cbs2 = ch->get_active_char_buffs();
+                    for (auto cb : cbs2) {
+                        SDL_Texture* cbtex = nullptr;
+                        switch (cb) {
+                            case CharBuffType::HEALTH: cbtex = rm.get_texture("health-buff"); break;
+                            case CharBuffType::SPEED: cbtex = rm.get_texture("speed-buff"); break;
+                            default: break;
+                        }
+                        if (cbtex) { SDL_Rect cbdst = { ix - 20 + 1, iconY, 20, 20 }; SDL_RenderCopy(renderer, cbtex, NULL, &cbdst); ix -= 20 + 6; }
+                    }
+                    BulletBuffType bb2 = ch->get_active_bullet_buff();
+                    SDL_Texture* btex2 = nullptr;
+                    switch (bb2) {
+                        case BulletBuffType::BOUNCING: btex2 = rm.get_texture("bounce-buff"); break;
+                        case BulletBuffType::EXPLODING: btex2 = rm.get_texture("explode-buff"); break;
+                        case BulletBuffType::PIERCING: btex2 = rm.get_texture("piercing-buff"); break;
+                        default: break;
+                    }
+                    if (btex2) { SDL_Rect bdst = { ix - 20 + 1, iconY, 20, 20 }; SDL_RenderCopy(renderer, btex2, NULL, &bdst); ix -= 20 + 6; }
                 }
             }
             SDL_RenderPresent(renderer);
@@ -1371,10 +1821,49 @@ int main (int argc, char *argv[]) {
         }
 
         SDL_RenderSetLogicalSize(renderer, WINDOW_W, WINDOW_H);
+        // If PVE produced a result, show a centered banner for 3 seconds so the player sees the outcome
+        if (pve_result != 0) {
+            std::string msg = (pve_result == 1) ? "You win" : "You lose";
+            Uint32 show_until = SDL_GetTicks() + 3000;
+            while (SDL_GetTicks() < show_until) {
+                SDL_Event e;
+                while (SDL_PollEvent(&e)) {
+                    if (e.type == SDL_QUIT) { show_until = 0; break; }
+                }
+                SDL_SetRenderDrawColor(renderer, 0, 0, 0, 220);
+                SDL_RenderClear(renderer);
+                SDL_Color hl = { 255, 200, 60, 255 };
+                SDL_Color textColor = { 30, 30, 30, 255 };
+                if (font) {
+                    SDL_Surface* surf = TTF_RenderText_Blended(font, msg.c_str(), textColor);
+                    if (surf) {
+                        SDL_Texture* tex = SDL_CreateTextureFromSurface(renderer, surf);
+                        int tw = surf->w, th = surf->h;
+                        SDL_FreeSurface(surf);
+                        SDL_Rect box = { WORLD_W/2 - (tw+40)/2, WORLD_H/2 - (th+30)/2, tw+40, th+30 };
+                        SDL_SetRenderDrawColor(renderer, hl.r, hl.g, hl.b, hl.a);
+                        SDL_RenderFillRect(renderer, &box);
+                        if (tex) {
+                            SDL_Rect dst = { box.x + 20, box.y + 12, tw, th };
+                            SDL_RenderCopy(renderer, tex, NULL, &dst);
+                            SDL_DestroyTexture(tex);
+                        }
+                    }
+                }
+                SDL_RenderPresent(renderer);
+                SDL_Delay(16);
+            }
+        }
         SDL_DestroyTexture(green_texture);
         SDL_DestroyTexture(red_texture);
         SDL_DestroyTexture(wall_tex_h);
         SDL_DestroyTexture(wall_tex_v);
+        // cleanup random walls created for PVE
+        for (auto* rw : pve_random_walls) if (rw) delete rw;
+        pve_random_walls.clear();
+    // cleanup blackholes (PVE)
+    for (auto& bhp : pve_blackholes_local) if (bhp.first) delete bhp.first;
+    pve_blackholes_local.clear();
         rm.unload_all();
     };
 
