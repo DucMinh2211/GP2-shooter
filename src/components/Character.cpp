@@ -2,6 +2,7 @@
 #include "ResourceManager.h"
 #include "inc/Bullet.h"
 #include "inc/CharBuff.h"
+#include "inc/Explosion.h"
 #include "inc/Wall.h"
 #include "inc/BuffItem.h"
 #include "math/Vector2.h"
@@ -75,6 +76,14 @@ void Character::update(float delta_time) {
     // update _shoot_delay
     _shoot_delay -= delta_time;
     std::max(_shoot_delay, 0.0f);
+
+    // update CharBuffList
+    for (CharBuff char_buff : _buff_list) {
+        char_buff.update(delta_time);
+    }
+
+    // update _gun_buffed
+    _gun_buffed.update(delta_time);
 
     // cập nhật shoot timer
     if (_shoot_timer > 0.0f) {
@@ -166,13 +175,31 @@ void Character::collide(ICollidable* object) {
                     std::variant<CharBuffType, BulletBuffType> buff_type = buff_item->get_buff_type();
                     if (std::holds_alternative<BulletBuffType>(buff_type)) {
                         this->_gun_buffed.set_type(std::get<BulletBuffType>(buff_type));
+                        buff_item->consume();
                     } else if (std::holds_alternative<CharBuffType>(buff_type)) {
                         CharBuffType char_buff_type = std::get<CharBuffType>(buff_type);
                         if (char_buff_type == CharBuffType::HEALTH) {
                             this->_health += 10;
+                            buff_item->consume();
                         } else if (char_buff_type == CharBuffType::SPEED) {
                             this->_speed += 100.0f;
+                            buff_item->consume();
+                            this->_buff_list.at((size_t)char_buff_type).timer_start();
                         }
+                    }
+                    return;
+                }
+            }
+        }
+    }
+    else if (Explosion *explosion = dynamic_cast<Explosion*>(object)) {
+        for (auto* char_hb : this->get_hitboxes()) {
+            for (auto* e_hb : object->get_hitboxes()) {
+                if (char_hb->is_collide(*e_hb)) {
+                    if (explosion->damageable) {
+                        std::cout << "DMG!";
+                        this->_health -= explosion->get_damage();
+                        explosion->damageable = false;
                     }
                     return;
                 }
