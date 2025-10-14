@@ -127,6 +127,9 @@ int main (int argc, char *argv[]) {
     SDL_FreeSurface(wall_surf);
 
     Wall far_wall(Vector2(WORLD_W / 2.0f, WORLD_H - 100), wall_tex);
+    // Additional wall: place to the right of far_wall with a small gap for bounce tests
+    const float wall_gap = 20.0f; // gap in pixels between walls
+    Wall right_wall(Vector2(WORLD_W / 2.0f + 100.0f + wall_gap, WORLD_H - 100), wall_tex);
 
     // setup
     // Team 1 (red)
@@ -164,10 +167,14 @@ int main (int argc, char *argv[]) {
     blackhole.set_animation(&blackhole_anim);
 
     SDL_Texture* health_buff_texture = resource_manager.load_texture("health-buff", "assets/pictures/health-buff.png");
+    SDL_Texture* bounce_tex = resource_manager.load_texture("bounce-buff", "assets/pictures/bounce-buff.png");
+    SDL_Texture* explode_tex = resource_manager.load_texture("explode-buff", "assets/pictures/explode-buff.png");
+    SDL_Texture* piercing_tex = resource_manager.load_texture("piercing-buff", "assets/pictures/piercing-buff.png");
+
     BuffItem* health_buff = new BuffItem(Vector2(100, WORLD_H - 100.0f), health_buff_texture ? health_buff_texture : green_texture, CharBuffType::HEALTH);
 
-    BuffItem* bounce_buff = new BuffItem(Vector2(160, WORLD_H - 100.0f), green_texture, BulletBuffType::BOUNCING);
-    BuffItem* explode_buff = new BuffItem(Vector2(220, WORLD_H - 100.0f), green_texture, BulletBuffType::EXPLODING);
+    BuffItem* bounce_buff = new BuffItem(Vector2(160, WORLD_H - 100.0f), bounce_tex ? bounce_tex : green_texture, BulletBuffType::BOUNCING);
+    BuffItem* explode_buff = new BuffItem(Vector2(220, WORLD_H - 100.0f), explode_tex ? explode_tex : green_texture, BulletBuffType::EXPLODING);
 
     std::vector<BuffItem*> buff_items {health_buff, bounce_buff, explode_buff};
 
@@ -227,19 +234,21 @@ int main (int argc, char *argv[]) {
         for (auto& bullet : bullet_list) {
             blackhole.collide(bullet);
             far_wall.collide(bullet);
+            right_wall.collide(bullet);
             for (auto& character : characters) {
                 character->collide(bullet);
             }
         }
 
-        for (auto& character : characters) {
-            blackhole.collide(character);
-            for (BuffItem* buff : buff_items) {
-                character->collide(buff);
+            for (auto& character : characters) {
+                blackhole.collide(character);
+                for (BuffItem* buff : buff_items) {
+                    character->collide(buff);
+                }
+                // Wall collisions
+                character->collide(&far_wall);
+                character->collide(&right_wall);
             }
-            // Wall collision
-            character->collide(&far_wall);
-        }
 
         // Explosion collision with characters
         for (auto* explosion : explosions) {
@@ -297,8 +306,9 @@ int main (int argc, char *argv[]) {
             obj->render(renderer);
         }
         // render black hole animation/sprite
-        blackhole.render(renderer);
-        far_wall.render(renderer);
+    blackhole.render(renderer);
+    far_wall.render(renderer);
+    right_wall.render(renderer);
     // render explosions
     for (auto* e : explosions) 
     {

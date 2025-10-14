@@ -76,7 +76,10 @@ test: $(TEST_TARGET)
 run-test: test
 	./$(TEST_TARGET)
 
+run: all
+	./$(TARGET)
+
 # Include dependency files
 -include $(DEPS)
 
-.PHONY: all clean test run-test
+.PHONY: all clean test run-test run
