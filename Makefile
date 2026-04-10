@@ -38,7 +38,7 @@ endif
 
 ifeq ($(UNAME_S), Darwin) # macOS
     LIBS = $(shell sdl2-config --libs) -lSDL2_image -lSDL2_ttf
-    CXXFLAGS += $(shell sdl2-config --cflags | sed 's|/SDL2||g')
+    CXXFLAGS += $(shell sdl2-config --cflags)
     RM = rm -f
 endif
 
@@ -46,25 +46,25 @@ ifeq ($(OS), Windows_NT)
     TARGET := $(TARGET).exe
     
     # Tự động lấy đường dẫn cài đặt từ Scoop
-    SCOOP_SDL2_PATH = $(shell scoop prefix sdl2 | tr -d '\r')
-    SCOOP_IMG_PATH  = $(shell scoop prefix sdl2-image | tr -d '\r')
-    SCOOP_TTF_PATH  = $(shell scoop prefix sdl2-ttf | tr -d '\r')
+    SCOOP_SDL2_PATH = ./win-deps/SDL2-2.32.10/x86_64-w64-mingw32/
+    SCOOP_IMG_PATH  = ./win-deps/SDL2_image-2.8.10/x86_64-w64-mingw32/
+    SCOOP_TTF_PATH  = ./win-deps/SDL2_ttf-2.24.0/x86_64-w64-mingw32/
 
     # Tổng hợp Include (Dùng dấu / thay vì \ để tránh lỗi escape trong Makefile)
-    CXXFLAGS += -I"$(SCOOP_SDL2_PATH)\include" \
-                -I"$(SCOOP_IMG_PATH)\include" \
-                -I"$(SCOOP_TTF_PATH)\include"
+    CXXFLAGS += -I"$(call FIX_PATH,$(SCOOP_SDL2_PATH))/include/SDL2" \
+                -I"$(call FIX_PATH,$(SCOOP_IMG_PATH))/include/SDL2" \
+                -I"$(call FIX_PATH,$(SCOOP_TTF_PATH))/include/SDL2"
 
     # Tổng hợp Libs
-    LIBS = -L"$(SCOOP_SDL2_PATH)\lib" \
-           -L"$(SCOOP_IMG_PATH)\lib" \
-           -L"$(SCOOP_TTF_PATH)\lib" \
-           -lmingw32 -lSDL2main -lSDL2 -lSDL2_image -lSDL2_ttf
-
+	LIBS = -L"$(call FIX_PATH,$(SCOOP_SDL2_PATH))/lib" -L"$(call FIX_PATH,$(SCOOP_IMG_PATH))/lib" -L"$(call FIX_PATH,$(SCOOP_TTF_PATH))/lib" \
+			-lmingw32 -lSDL2main -lSDL2 -lSDL2_image -lSDL2_ttf -mwindows
     # Lệnh xóa file trên Windows (dùng del an toàn hơn)
-    RM = del /S /Q
+    RM = rm -f
     # Fix đường dẫn cho shell (chuyển \ thành /)
     FIX_PATH = $(subst \,/,$(1))
+	COPY_DLLS = cp -f $(call FIX_PATH,$(SCOOP_SDL2_PATH))bin/*.dll . && \
+                cp -f $(call FIX_PATH,$(SCOOP_IMG_PATH))bin/*.dll . && \
+                cp -f $(call FIX_PATH,$(SCOOP_TTF_PATH))bin/*.dll .
 endif
 
 # Default target
@@ -84,14 +84,25 @@ $(TEST_TARGET): $(OBJS) $(TEST_OBJ)
 # Clean rule
 clean:
 	$(RM) $(TARGET) $(TEST_TARGET) $(OBJS) $(MAIN_OBJ) $(TEST_OBJ) $(DEPS)
+ifeq ($(OS), Windows_NT)
+	-@rm -f *.dll
+endif
 
 # Test rules
 test: $(TEST_TARGET)
 
 run-test: test
+ifeq ($(OS), Windows_NT)
+	@echo "Checking/Copying DLLs..."
+	@$(COPY_DLLS)
+endif
 	./$(TEST_TARGET)
 
 run: all
+ifeq ($(OS), Windows_NT)
+	@echo "Checking/Copying DLLs..."
+	@$(COPY_DLLS)
+endif
 	./$(TARGET)
 
 # Include dependency files
