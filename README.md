@@ -164,8 +164,10 @@ For Windows, the necessary SDL2 libraries are conveniently included within the `
 
 However, to compile and run the project:
 *   Install **MinGW-w64** (or another GCC-compatible compiler suite).
-*   Install **Git for Windows**, which includes **Git Bash** and the `make` utility.
+*   Install **Git for Windows**, which includes **Git Bash** and the `make` utility. Or you can install `make` with *scoop/chocolate*.
 *   **Recommendation**: Perform all `make` commands within a **Git Bash** or **MSYS2 terminal** to ensure proper execution.
+
+You will have to change `./Makefile` a little bit so it fits your `shell`'s commands, as it is specialized for particular `powershell` shell.
 
 ### Building the Project
 The project utilizes a `Makefile` for streamlined compilation across different platforms.
