@@ -3,6 +3,10 @@
 ## Overview
 GP2-shooter is a 2D shooter game developed with a focus on low-level system interactions and efficient gameplay mechanics. Built directly on the SDL2 framework, this project demonstrates proficiency in fundamental game development concepts, custom physics implementations, and cross-platform build processes.
 
+## Video Demo
+
+https://github.com/user-attachments/assets/10ee365d-fe66-4a71-b252-f20d5ce5f974
+
 ## Key Technical Highlights
 *   **Low-Level Graphics & Input**: Direct utilization of **SDL2** for rendering, event handling, and audio management, showcasing a deep understanding of the core functionalities of a minimal game development framework.
 *   **High-Performance Math & Physics**: Implementation of custom mathematical utilities, including a **Vector2** class, for precise entity positioning and movement. Advanced collision detection (e.g., OBB - Oriented Bounding Box, Circle-based collisions) is integrated, alongside foundational physics principles such as gravity, forces, and velocity management.
