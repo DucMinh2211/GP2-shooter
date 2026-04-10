@@ -1,7 +1,7 @@
 #pragma once
 
 #include "math/Vector2.h"
-#include "SDL2/SDL.h"
+#include "SDL.h"
 
 class HitBox {
 protected:

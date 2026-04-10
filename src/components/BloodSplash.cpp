@@ -1,6 +1,6 @@
 #include "inc/BloodSplash.h"
 #include "inc/Character.h"
-#include <SDL2/SDL.h>
+#include <SDL.h>
 
 BloodSplash::BloodSplash(SDL_Renderer* renderer, const std::string& sheetPath, Vector2 pos, int frameW, int frameH, int frameCount, int frameTime, int columns)
     : Obstacle(pos, nullptr, {}), elapsed(0.0f), finished(false) {

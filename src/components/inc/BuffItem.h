@@ -3,7 +3,7 @@
 #include "Obstacle.h"
 #include "CharBuff.h"
 #include "BulletBuff.h"
-#include <SDL2/SDL_render.h>
+#include <SDL_render.h>
 #include <variant>
 
 // forward decl

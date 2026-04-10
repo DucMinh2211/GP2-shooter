@@ -1,8 +1,8 @@
 #include "inc/InputHandler.h"
 #include "inc/IInputObject.h"
 #include "math/Vector2.h"
-#include <SDL2/SDL_events.h>
-#include <SDL2/SDL_keycode.h>
+#include <SDL_events.h>
+#include <SDL_keycode.h>
 #include <vector>
 
 InputHandler::InputHandler(InputSet input_set, IInputObject* activated_char, IInputObject* unactivated_char) : _input_set(input_set), _activated_char(activated_char), _unactivated_char(unactivated_char) {

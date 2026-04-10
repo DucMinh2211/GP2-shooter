@@ -3,7 +3,7 @@
 #include "inc/Bullet.h"
 #include "inc/Circle.h"
 #include "inc/Obstacle.h"
-#include <SDL2/SDL.h>
+#include <SDL.h>
 #include <unordered_set>
 
 Explosion::Explosion(SDL_Renderer* renderer, const std::string& sheetPath, Vector2 pos,

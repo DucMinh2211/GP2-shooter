@@ -6,8 +6,8 @@
 #include "inc/Wall.h"
 #include "inc/BuffItem.h"
 #include "math/Vector2.h"
-#include "SDL2/SDL_render.h"
-#include <SDL2/SDL_error.h>
+#include "SDL_render.h"
+#include <SDL_error.h>
 #include <algorithm>
 #include <iostream>
 #include <vector>

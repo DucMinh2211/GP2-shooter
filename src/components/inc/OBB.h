@@ -1,7 +1,7 @@
 #pragma once
 #include "HitBox.h"
 #include "math/Vector2.h"
-#include <SDL2/SDL.h>
+#include <SDL.h>
 #include <vector>
 #include "Circle.h"
 

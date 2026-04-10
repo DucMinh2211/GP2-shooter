@@ -3,7 +3,7 @@
 #include "inc/Explosion.h"
 #include "inc/Rect.h"
 #include "inc/Circle.h"
-#include "SDL2/SDL_render.h"
+#include "SDL_render.h"
 #include "inc/OBB.h"
 #include "inc/Wall.h"
 #include <iostream>

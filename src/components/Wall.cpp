@@ -1,7 +1,7 @@
 #include "inc/Wall.h"
 #include "inc/OBB.h"
-#include <SDL2/SDL_render.h>
-#include <SDL2/SDL_error.h>
+#include <SDL_render.h>
+#include <SDL_error.h>
 #include <iostream>
 
 // Constructor: Automatically creates a hitbox based on the sprite's dimensions.

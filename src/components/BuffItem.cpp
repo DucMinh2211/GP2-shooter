@@ -1,5 +1,5 @@
-#include <SDL2/SDL_render.h>
-#include <SDL2/SDL_timer.h>
+#include <SDL_render.h>
+#include <SDL_timer.h>
 #include "inc/BuffItem.h"
 #include "inc/OBB.h"
 #include "inc/Character.h"

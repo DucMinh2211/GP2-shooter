@@ -28,14 +28,11 @@ TEST_OBJ = $(TEST_SRC:.cpp=.o)
 # Dependency files
 DEPS = $(OBJS:.o=.d) $(MAIN_OBJ:.o=.d) $(TEST_OBJ:.o=.d)
 
-# Default target
-all: $(TARGET)
-
 # OS-specific configuration
 
 ifeq ($(UNAME_S), Linux)
     LIBS = $(shell sdl2-config --libs) -lSDL2_image -lSDL2_ttf
-    CXXFLAGS += $(shell sdl2-config --cflags)
+    CXXFLAGS += $(shell sdl2-config --cflags) -I$(shell sdl2-config --prefix)/include/SDL2
     RM = rm -f
 endif
 
@@ -47,13 +44,31 @@ endif
 
 ifeq ($(OS), Windows_NT)
     TARGET := $(TARGET).exe
-    # User must set SDL2_PATH to the root of the SDL2 development library
-    # e.g. export SDL2_PATH=C:/SDL2-2.0.14
-    LIBS = -L$(SDL2_PATH)/lib/x64 -lSDL2main -lSDL2 -lSDL2_image -lSDL2_ttf
-    CXXFLAGS += -I$(SDL2_PATH)/include
-    RM = del /F /Q
+    
+    # Tự động lấy đường dẫn cài đặt từ Scoop
+    SCOOP_SDL2_PATH = $(shell scoop prefix sdl2 | tr -d '\r')
+    SCOOP_IMG_PATH  = $(shell scoop prefix sdl2-image | tr -d '\r')
+    SCOOP_TTF_PATH  = $(shell scoop prefix sdl2-ttf | tr -d '\r')
+
+    # Tổng hợp Include (Dùng dấu / thay vì \ để tránh lỗi escape trong Makefile)
+    CXXFLAGS += -I"$(SCOOP_SDL2_PATH)\include" \
+                -I"$(SCOOP_IMG_PATH)\include" \
+                -I"$(SCOOP_TTF_PATH)\include"
+
+    # Tổng hợp Libs
+    LIBS = -L"$(SCOOP_SDL2_PATH)\lib" \
+           -L"$(SCOOP_IMG_PATH)\lib" \
+           -L"$(SCOOP_TTF_PATH)\lib" \
+           -lmingw32 -lSDL2main -lSDL2 -lSDL2_image -lSDL2_ttf
+
+    # Lệnh xóa file trên Windows (dùng del an toàn hơn)
+    RM = del /S /Q
+    # Fix đường dẫn cho shell (chuyển \ thành /)
+    FIX_PATH = $(subst \,/,$(1))
 endif
 
+# Default target
+all: $(TARGET)
 
 # Linker
 $(TARGET): $(OBJS) $(MAIN_OBJ)

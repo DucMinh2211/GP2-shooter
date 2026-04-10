@@ -3,7 +3,7 @@
 #include "Entity.h"
 #include "ICollidable.h"
 #include "BulletBuff.h"
-#include "SDL2/SDL_render.h"
+#include "SDL_render.h"
 #include "IRenderable.h"
 #include "Rect.h" // Add this include for Rect
 #include <vector>

@@ -2,7 +2,7 @@
 #include "inc/Character.h"
 #include "inc/Bullet.h"
 #include "inc/Circle.h"
-#include <SDL2/SDL_render.h>
+#include <SDL_render.h>
 #include <iostream>
 
 // Constructor

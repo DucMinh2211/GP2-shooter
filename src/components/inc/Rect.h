@@ -1,7 +1,7 @@
 #pragma once
 
 #include "HitBox.h"
-#include <SDL2/SDL.h>
+#include <SDL.h>
 
 // forward declaration
 class Circle;

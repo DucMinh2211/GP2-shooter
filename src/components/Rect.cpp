@@ -1,6 +1,6 @@
 #include "inc/Rect.h"
 #include "inc/Circle.h"
-#include "SDL2/SDL.h"
+#include "SDL.h"
 
 // Implement the dispatcher for is_collide
 bool Rect::is_collide(HitBox& hitbox) {
